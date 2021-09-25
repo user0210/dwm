@@ -786,7 +786,7 @@ int drawsep(Monitor *m, int lr, int p, int xpos, int s) {
 
 int drawtag(Monitor *m, int lr, int p, int xpos) {
 	tgw = lr;
-	int i, x, w = 0;
+	int indn, i, x, w = 0;
 	unsigned int occ = 0, urg = 0;
 	Client *c;
 
@@ -800,6 +800,7 @@ int drawtag(Monitor *m, int lr, int p, int xpos) {
 			/* do not draw vacant tags */
 			if (!(occ & 1 << i || m->tagset[m->seltags] & 1 << i))
 				continue;
+			indn = 0;
 			w = TEXTW(tags[i]);
 			x = p ? m->ww - lr - w : lr;
 
@@ -814,6 +815,12 @@ int drawtag(Monitor *m, int lr, int p, int xpos) {
 			else
 				drw_setscheme(drw, scheme[SchemeBar]);
 			drw_text(drw, x, 0, w, bh, lrpad / 2, tags[i], urg & 1 << i);
+			for (c = m->clients; c; c = c->next) {
+				if ((c->tags & (1 << i)) && (indn * 3 + 2 < bh)) {
+					drw_rect(drw, x + 1, indn * 3 + 1, selmon->sel == c ? 5 : 2, 2, 1, urg & 1 << i);
+					indn++;
+				}
+			}
 			lr = lr + w;
 		}
 	}
