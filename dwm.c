@@ -2371,6 +2371,9 @@ updatebars(void)
 		.colormap = cmap,
 		.event_mask = ButtonPressMask|ExposureMask|PointerMotionMask|EnterWindowMask
 	};
+	char *title = "dwmbar";
+	XTextProperty tp;
+	XStringListToTextProperty(&title, 1, &tp);
 	XClassHint ch = {"dwm", "dwm"};
 	for (m = mons; m; m = m->next) {
 		if (!m->barwin) {
@@ -2380,6 +2383,7 @@ updatebars(void)
 			XDefineCursor(dpy, m->barwin, cursor[CurNormal]->cursor);
 			XMapRaised(dpy, m->barwin);
 			XSetClassHint(dpy, m->barwin, &ch);
+			XSetWMName(dpy, m->barwin, &tp);
 		}
         if (!m->ebarwin) {
 			m->ebarwin = XCreateWindow(dpy, root, m->wx, m->eby, m->ww, bh, 0, depth,
@@ -2388,6 +2392,7 @@ updatebars(void)
 			XDefineCursor(dpy, m->ebarwin, cursor[CurNormal]->cursor);
 			XMapRaised(dpy, m->ebarwin);
 			XSetClassHint(dpy, m->ebarwin, &ch);
+			XSetWMName(dpy, m->ebarwin, &tp);
 		}
 	}
 }
