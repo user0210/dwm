@@ -1053,6 +1053,8 @@ focus(Client *c)
 		XDeleteProperty(dpy, root, netatom[NetActiveWindow]);
 	}
 	selmon->sel = c;
+	if (selmon->lt[selmon->sellt]->arrange == tile || selmon->lt[selmon->sellt]->arrange == monocle)
+		arrangemon(selmon);
 	drawbars();
 }
 
@@ -1375,8 +1377,15 @@ monocle(Monitor *m)
 			n++;
 	if (n > 0) /* override layout symbol */
 		snprintf(m->ltsymbol, sizeof m->ltsymbol, "[%d]", n);
-	for (c = nexttiled(m->clients); c; c = nexttiled(c->next))
-		resize(c, m->wx + m->gappx - c->bw, m->wy + m->gappx - (abs(m->showbar) == 0 ? c->bw : 0), m->ww - 2 * m->gappx, m->wh - 2 * m->gappx - (abs(m->showbar) == 0 ? 0 : c->bw), 0);
+	for (c = m->stack; c && (!ISVISIBLE(c) || c->isfloating); c = c->snext);
+	if (c && !c->isfloating) {
+		XMoveWindow(dpy, c->win, m->wx + m->gappx - c->bw, m->wy + m->gappx - (abs(m->showbar) == 0 ? c->bw : 0));
+		resize(c, m->wx + m->gappx - c->bw, m->wy + m->gappx - (abs(m->showbar) == 0 ? c->bw : 0), m->ww - 2 * m->gappx, m->wh - 2 * m->gappx, 0);
+		c = c->snext;
+	}
+	for (; c; c = c->snext)
+		if (!c->isfloating && ISVISIBLE(c))
+			XMoveWindow(dpy, c->win, - 2 * WIDTH(c), c->y);
 }
 
 void
@@ -1781,6 +1790,7 @@ setlayout(const Arg *arg)
 		arrange(selmon);
 	else
 		drawbar(selmon, 0);
+	arrangemon(selmon);
 }
 
 /* arg > 1.0 will set mfact absolutely */
@@ -1951,7 +1961,7 @@ tile(Monitor *m)
 	int x1 = m->wx + m->gappx, y1 = m->wy + m->gappx, h1 = m->wh - m->gappx, w1 = m->ww - m->gappx, X1 = x1 + w1, Y1 = y1 + h1;
 	int x2 = m->wx + m->gappx, y2 = m->wy + m->gappx, h2 = m->wh - m->gappx, w2 = m->ww - m->gappx, X2 = x2 + w2, Y2 = y2 + h2;
 	unsigned int i, n, n1, n2, bw;
-	Client *c;
+	Client *c, *s, *d, *t, *o;
 	float mfacts = 0, sfacts = 0;
 
 	bw = borderpx;
@@ -2040,7 +2050,7 @@ tile(Monitor *m)
 	/* master */
 	n1 = (m->ltaxis[1] != 1 || w1 < (bh + m->gappx + 2 * borderpx) * (m->nmaster + 1)) ? 1 : m->nmaster;
 	n2 = (m->ltaxis[1] != 2 || h1 < (bh + m->gappx + 2 * borderpx) * (m->nmaster + 1)) ? 1 : m->nmaster;
-	for(i = 0, c = nexttiled(m->clients); i < m->nmaster; c = nexttiled(c->next), i++) {
+	for(i = 0, o = c = nexttiled(m->clients); i < m->nmaster; o = c = nexttiled(c->next), i++) {
 		resize(c, x1, y1,
 			(m->ltaxis[1] == 1 && i + 1 == m->nmaster) ? X1 - x1 - 2 * bw - m->gappx : w1 * (n1 > 1 ? (c->cfact / mfacts) : 1) - 2 * bw - m->gappx,
 			(m->ltaxis[1] == 2 && i + 1 == m->nmaster) ? Y1 - y1 - 2 * bw - m->gappx : h1 * (n2 > 1 ? (c->cfact / mfacts) : 1) - 2 * bw - m->gappx,
@@ -2050,14 +2060,29 @@ tile(Monitor *m)
 		if(n2 > 1)
 			y1 = c->y + HEIGHT(c) + m->gappx;
 	}
+	if(m->ltaxis[1] == 3) {
+		for(i = 0, o = d = nexttiled(m->clients); i < m->nmaster; o = d = nexttiled(d->next), i++) {
+			XMoveWindow(dpy, d->win, WIDTH(d) * -2, d->y);
+		}
+		for (t = m->stack; t; t = t->snext) {
+			if (!ISVISIBLE(t) || t->isfloating)
+				continue;
+			for (i = 0, d = nexttiled(m->clients); d && d != t; d = nexttiled(d->next), i++);
+			if (i >= m->nmaster)
+				continue;
+			XMoveWindow(dpy, t->win, x1, y1);
+//			resize(t, x1, y1, w1 - 2 * bw - m->gappx, h1 - 2 * bw - m->gappx, 0);
+			break;
+		}
+	}
 
 	/* stack */
 	if(n > m->nmaster) {
 		n1 = (m->ltaxis[2] != 1 || w2 < (bh + m->gappx + 2 * borderpx) * (n - m->nmaster + 1)) ? 1 : n - m->nmaster;
 		n2 = (m->ltaxis[2] != 2 || h2 < (bh + m->gappx + 2 * borderpx) * (n - m->nmaster + 1)) ? 1 : n - m->nmaster;
-			for(i = 0; c; c = nexttiled(c->next), i++) {
+			for(i = 0, c = o; c; c = nexttiled(c->next), i++) {
 				resize(c, x2, y2, 
-					(m->ltaxis[2] == 1 && i + 1 == n - m->nmaster) ? X2 - x2 - 2 * bw - m->gappx : w2 * (n1 > 1 ? (c->cfact / sfacts) : 1) - 2 * bw - m->gappx,
+					(m->ltaxis[2] == 1 && i + 1 == n - m->nmaster) ? X2 - x2 - 2 * bw - m->gappx : w2 * (n1 > 1 ? (c->cfact / sfacts) : 1) - 2 * bw - m->gappx, 
 					(m->ltaxis[2] == 2 && i + 1 == n - m->nmaster) ? Y2 - y2 - 2 * bw - m->gappx : h2 * (n2 > 1 ? (c->cfact / sfacts) : 1) - 2 * bw - m->gappx,
 					0);
 				if(n1 > 1)
@@ -2065,6 +2090,20 @@ tile(Monitor *m)
 				if(n2 > 1)
 					y2 = c->y + HEIGHT(c) + m->gappx;
 			}
+		if(m->ltaxis[2] == 3) {
+			for(i = 0, c = o; c; c = nexttiled(c->next), i++)
+				XMoveWindow(dpy, c->win, WIDTH(c) * -2, c->y);
+			for (s = m->stack; s; s = s->snext) {
+				if (!ISVISIBLE(s) || s->isfloating)
+					continue;
+				for (i = 0, c = nexttiled(m->clients); c && c != s; c = nexttiled(c->next), i++);
+				if (i < m->nmaster)
+					continue;
+				resize(c, x2, y2, w2 - 2 * bw - m->gappx, h2 - 2 * bw - m->gappx, 0);
+				XMoveWindow(dpy, c->win, x2, y2);
+				break;
+			}
+		}
 	}
 }
 
@@ -2089,6 +2128,7 @@ togglefloating(const Arg *arg)
 		resize(selmon->sel, selmon->sel->x, selmon->sel->y,
 			selmon->sel->w, selmon->sel->h, 0);
 	arrange(selmon);
+	arrangemon(selmon);
 }
 
 void
@@ -2739,10 +2779,8 @@ setgaps(const Arg *arg)
 {
 	if ((arg->i == 0) || (selmon->gappx + arg->i < 0))
 		selmon->gappx = 0;
-	else {
-		if (selmon->gappx + arg->i < 50)
+	else if (selmon->gappx + arg->i < 50)
 		selmon->gappx += arg->i;
-		}
 	arrangemon(selmon);
 }
 
