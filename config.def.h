@@ -53,6 +53,7 @@ static const char *ebarorder[] = {
 static const char dmenufont[]		= "monospace:pixelsize=16";
 static const char *fonts[]			= { dmenufont };
 
+static const int bargap				= 1;		/* bar padding on/off */
 static const int borderpx			= 1;		/* border pixel of windows */
 static const int gappx				= 4;		/* gaps between windows */
 static const int snap				= 32;		/* snap pixel */
@@ -156,7 +157,9 @@ static const Rule rules[] = {
 
 /* commands */
 static char dmenumon[2] = "0"; /* component of dmenucmd, manipulated in spawn() */
-static const char *dmenucmd[] = { "dmenu_run", "-m", dmenumon, "-fn", dmenufont, "-nb", bar_bg, "-nf", bar_fg, "-sb", sel_bg, "-sf", sel_fg, NULL };
+static char dmenugap[16] = "0";
+static char dmenulen[16] = "0";
+static const char *dmenucmd[] = { "dmenu_run", "-m", dmenumon, "-fn", dmenufont, "-x", dmenugap, "-y", dmenugap, "-z", dmenulen, "-nb", bar_bg, "-nf", bar_fg, "-sb", foc_bg, "-sf", foc_fg, NULL };
 static const char *termcmd[]  = { "st", NULL };
 
 
@@ -197,7 +200,7 @@ static Key keys[] = {
 	{ MODKEY|ShiftMask,				XK_period,			tagmon,					{.i = +1 } },
 	{ MODKEY,						XK_minus,			setgaps,				{.i = -2 } },
 	{ MODKEY,						XK_plus,			setgaps,				{.i = +2 } },
-	{ MODKEY|ControlMask,			XK_o,				setgaps,				{.i = 0  } },
+	{ MODKEY|ShiftMask,				XK_o,				setgaps,				{.i = 0  } },
 	{ MODKEY|ControlMask|ShiftMask,	XK_q,				quit,					{0} },
 
     { MODKEY|ALT,					XK_k,				switchtag,				{ .ui = SWITCHTAG_UP     | SWITCHTAG_VIEW } },
