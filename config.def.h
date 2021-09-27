@@ -80,6 +80,9 @@ static const char tag_bg[]			= "#eeeeee";
 static const char tag_brd[]			= "#222222";
 static const char tag_flo[]			= "#222222";
 
+static const float transp    = 0.0;
+static const float semitr    = 0.8;
+
 static const char *colors[][4]		= {
 	/*					fg			bg			border		float   */
 	[SchemeBar]		= { bar_fg,		bar_bg,		bar_brd,	bar_flo	},
@@ -88,6 +91,16 @@ static const char *colors[][4]		= {
 	[SchemeFocus]	= { foc_fg,		foc_bg,		foc_brd,	foc_flo },
 	[SchemeUnfocus]	= { unf_fg,		unf_bg,		unf_brd,	unf_flo },
 	[SchemeTag]		= { tag_fg,		tag_bg,		tag_brd,	tag_flo },
+};
+
+static const float alphas[][4] = {
+    /*					fg			bg			border		float	*/
+    [SchemeBar]		= { OPAQUE,		OPAQUE,		OPAQUE,		OPAQUE	},
+    [SchemeSelect]	= { OPAQUE,		OPAQUE,		OPAQUE,		OPAQUE	},
+    [SchemeBorder]	= { OPAQUE,		OPAQUE,		OPAQUE,		OPAQUE	},
+    [SchemeFocus]	= { OPAQUE,		OPAQUE,		OPAQUE,		OPAQUE	},
+    [SchemeUnfocus] = { OPAQUE,		OPAQUE,		OPAQUE,		OPAQUE	},
+    [SchemeTag]		= { OPAQUE,		OPAQUE,		OPAQUE,		OPAQUE	},
 };
 
 
