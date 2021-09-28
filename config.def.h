@@ -152,12 +152,13 @@ static const int  layoutaxis[] = {
 /* rules */
 static const Rule rules[] = {
 	/* xprop(1):
-	 *	WM_CLASS(STRING) = instance, class
-	 *	WM_NAME(STRING) = title
+	 *	WM_CLASS(STRING)	= instance, class
+	 *	WM_NAME(STRING)		= title
+	 *	switchtag			= 0 default, 1 switch to tag, 2 add application-tag, 3 as (1) and revert, 4 as (2) and revert
 	 */
-	/* class			instance		title		tags mask	isfloating	monitor */
-	{ "Gimp",			NULL,			NULL,		0,			1,			-1 },
-	{ "Firefox",		NULL,			NULL,		1 << 8,		0,			-1 },
+	/* class			instance		title		tags mask	switchtag	isfloating	monitor */
+	{ "Gimp",			NULL,			NULL,		0,			1,			1,			-1 },
+	{ "Firefox",		NULL,			NULL,		1 << 8,		1,			0,			-1 },
 };
 
 
