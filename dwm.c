@@ -2727,6 +2727,21 @@ toggleview(const Arg *arg)
 	unsigned int newtagset = selmon->tagset[selmon->seltags] ^ (arg->ui & TAGMASK);
 	int i;
 
+	Client *const selected = selmon->sel;
+	Client **const masters = calloc(selmon->nmaster, sizeof(Client *));
+	if (!masters) {
+		die("fatal: could not calloc() %u bytes \n", selmon->nmaster * sizeof(Client *));
+	}
+	Client *c;
+	size_t j;
+	for (c = nexttiled(selmon->clients), j = 0; c && j < selmon->nmaster; c = nexttiled(c->next), ++j)
+		masters[selmon->nmaster - (j + 1)] = c;
+	for (j = 0; j < selmon->nmaster; ++j)
+		if (masters[j])
+			pop(masters[j]);
+	free(masters);
+	focus(selected);
+
 	if (newtagset) {
 		selmon->tagset[selmon->seltags] = newtagset;
 		if (newtagset == ~0) {
