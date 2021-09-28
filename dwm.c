@@ -297,6 +297,7 @@ static void drawtabgroups(Monitor *m, int x, int r, int xpos, int passx);
 static void drawtab(Monitor *m, Client *c, int x, int w, int xpos, int tabgroup_active, int *prev);
 static void drawtaboptionals(Monitor *m, Client *c, int x, int w, int tabgroup_active);
 static void drawtaggrid(Monitor *m, int *x_pos, unsigned int occ);
+static Client *findbefore(Client *c);
 static void freeicon(Client *c);
 static Atom getatomprop(Client *c, Atom prop);
 static int getdwmblockspid();
@@ -392,6 +393,7 @@ struct Pertag {
 	const Layout *ltidxs[LENGTH(tags) + 1][2];	/* matrix of tags and layouts indexes  */
 	int showbars[LENGTH(tags) + 1];				/* display bar for the current tag */
 	int showebars[LENGTH(tags) + 1];			/* display ebar for the current tag */
+	Client *prevzooms[LENGTH(tags) + 1];		/* store zoom information */
 };
 
 /* compile-time check if all tags fit into an unsigned int bit array. */
@@ -971,6 +973,7 @@ createmon(void)
 		m->pertag->sellts[i] = m->sellt;
 		m->pertag->showbars[i] = m->showbar;
 		m->pertag->showebars[i] = m->showebar;
+		m->pertag->prevzooms[i] = NULL;
 	}
 	return m;
 }
@@ -3239,17 +3242,51 @@ void
 zoom(const Arg *arg)
 {
 	Client *c = selmon->sel;
+	Client *at = NULL, *cold, *cprevious = NULL, *p;
 
 	if (!selmon->lt[selmon->sellt]->arrange
-	|| (selmon->sel && selmon->sel->isfloating))
+	|| (selmon->sel && selmon->sel->isfloating) || !c)
 		return;
-	if (c == nexttiled(selmon->clients))
-		if (!c || !(c = nexttiled(c->next)))
-			return;
-	pop(c);
+	if (c == nexttiled(c->mon->clients)) {
+		p = c->mon->pertag->prevzooms[c->mon->pertag->curtag];
+		at = findbefore(p);
+		if (at)
+			cprevious = nexttiled(at->next);
+		if (!cprevious || cprevious != p) {
+			c->mon->pertag->prevzooms[c->mon->pertag->curtag] = NULL;
+			if (!c || !(c = nexttiled(c->next)))
+				return;
+		} else
+			c = cprevious;
+	}
+	cold = nexttiled(c->mon->clients);
+	if (c != cold && !at)
+		at = findbefore(c);
+	detach(c);
+	attach(c);
+	/* swap windows instead of pushing the previous one down */
+	if (c != cold && at) {
+		c->mon->pertag->prevzooms[c->mon->pertag->curtag] = cold;
+		if (cold && at != cold) {
+			detach(cold);
+			cold->next = at->next;
+			at->next = cold;
+		}
+	}
+	focus(c);
+	arrange(c->mon);
 }
 
 /* patch - function implementations */
+
+Client *
+findbefore(Client *c) {
+	Client *p;
+	if (!c || c == c->mon->clients)
+		return NULL;
+	for (p = c->mon->clients; p && p->next != c; p = p->next);
+	return p;
+}
 
 void
 copyvalidchars(char *text, char *rawtext)
