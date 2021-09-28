@@ -3410,14 +3410,14 @@ void drawtaboptionals(Monitor *m, Client *c, int x, int w, int tabgroup_active)
 			drw_rect(drw, (
 					x + w
 					- BARTABGROUPS_INDICATORSPADPX
-					- ((LENGTH(tags) / BARTABGROUPS_TAGSROWS) * BARTABGROUPS_TAGSPX)
-					- (i % (LENGTH(tags)/BARTABGROUPS_TAGSROWS))
-					+ ((i % (LENGTH(tags) / BARTABGROUPS_TAGSROWS)) * BARTABGROUPS_TAGSPX)
+					- ((LENGTH(tags) / tagrows) * BARTABGROUPS_TAGSPX)
+					- (i % (LENGTH(tags)/tagrows))
+					+ ((i % (LENGTH(tags) / tagrows)) * BARTABGROUPS_TAGSPX)
 				),
 				(
 					BARTABGROUPS_INDICATORSPADPX
-					+ ((i / (LENGTH(tags)/BARTABGROUPS_TAGSROWS)) * BARTABGROUPS_TAGSPX)
-					- ((i / (LENGTH(tags)/BARTABGROUPS_TAGSROWS)))
+					+ ((i / (LENGTH(tags)/tagrows)) * BARTABGROUPS_TAGSPX)
+					- ((i / (LENGTH(tags)/tagrows)))
 				),
 				BARTABGROUPS_TAGSPX, BARTABGROUPS_TAGSPX, (c->tags >> i) & 1, 0
 			);

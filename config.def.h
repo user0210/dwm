@@ -12,7 +12,6 @@
 #define BARTABGROUPS_FUZZPX				 5		/* pixels cutoff between bartab groups to merge (e.g. max gaps px) */
 #define BARTABGROUPS_TAGSINDICATOR		 1		/* 0 = disable, 1 = enable when >1 client or view tag, 2 = enable always */
 #define BARTABGROUPS_TAGSPX				 5		/* pixels for tag grid boxes */
-#define BARTABGROUPS_TAGSROWS			 2		/* rows in tag grid */
 #define BARTABGROUPS_INDICATORSPADPX	 2		/* pixels from l/r to pad tags indicators */
 
 /* grid of tags */
