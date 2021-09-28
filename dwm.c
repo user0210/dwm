@@ -348,6 +348,7 @@ static Visual *visual;
 
 static int dwmblockssig;
 pid_t dwmblockspid = 0;
+unsigned int xstat = 0;
 
 /* configuration, allows nested code to access above variables */
 #include "config.h"
@@ -541,7 +542,7 @@ int
 buttonstatus(int l, int xpos, int click)
 {
 	char ch, *text = rawstext;
-	int i = -1, x = l;
+	int i = -1, x = l + xstat;
 
 	dwmblockssig = -1;
 	while (text[++i]) {
@@ -1111,6 +1112,15 @@ drawstatus(char* stext, Monitor *m, int xpos, int l, int r)
 
 	ch = '\n';
 	strncat(stext, &ch, 1);
+
+	if (statuscenter) {
+		xstat = (selmon->ww - l - r - status2dtextlength(stext)) / 2;
+		x = sep += xstat;
+		if (xpos > l && xpos < x) {
+			fsep = l;
+			fblock = x - l;
+		}
+	}
 
 	p = text;
 
