@@ -4004,10 +4004,10 @@ transfer(const Arg *arg)
 	if (!selmon->sel || selmon->sel->isfloating || i == 0) {
 		return;
 	} else if (transfertostack) {
-		selmon->nmaster = MIN(i, selmon->nmaster) - 1;
+		selmon->nmaster = selmon->pertag->nmasters[selmon->pertag->curtag] = MIN(i, selmon->nmaster) - 1;
 		insertafter = stail;
 	} else {
-		selmon->nmaster = selmon->nmaster + 1;
+		selmon->nmaster = selmon->pertag->nmasters[selmon->pertag->curtag] = selmon->nmaster + 1;
 		insertafter = mtail;
 	}
 	if (insertafter != selmon->sel) {
