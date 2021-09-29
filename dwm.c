@@ -38,6 +38,7 @@
 #include <X11/Xatom.h>
 #include <X11/Xlib.h>
 #include <X11/Xproto.h>
+#include <X11/Xresource.h>
 #include <X11/Xutil.h>
 #ifdef XINERAMA
 #include <X11/extensions/Xinerama.h>
@@ -69,6 +70,22 @@
 #define TEXTW(X)                (drw_fontset_getwidth(drw, (X)) + lrpad)
 
 /* patch - definitions */
+#define XRDB_LOAD_COLOR(R,V)    if (XrmGetResource(xrdb, R, NULL, &type, &value) == True) { \
+                                  if (value.addr != NULL && strnlen(value.addr, 8) == 7 && value.addr[0] == '#') { \
+                                    int i = 1; \
+                                    for (; i <= 6; i++) { \
+                                      if (value.addr[i] < 48) break; \
+                                      if (value.addr[i] > 57 && value.addr[i] < 65) break; \
+                                      if (value.addr[i] > 70 && value.addr[i] < 97) break; \
+                                      if (value.addr[i] > 102) break; \
+                                    } \
+                                    if (i == 7) { \
+                                      strncpy(V, value.addr, 7); \
+                                      V[7] = '\0'; \
+                                    } \
+                                  } \
+                                }
+
 #define OPAQUE                  1.0
 
 #define SYSTEM_TRAY_REQUEST_DOCK    0
@@ -299,6 +316,7 @@ static long get_tmux_client_pid(long shell_pid);
 static void inplacerotate(const Arg *arg);
 static int isdescprocess(pid_t parent, pid_t child);
 static int is_a_tmux_server(pid_t pid);
+static void loadxrdb(void);
 static void mirrorlayout(const Arg *arg);
 static Client *nexttagged(Client *c);
 static void notifyhandler(const Arg *arg);
@@ -335,6 +353,7 @@ static void updatesystrayiconstate(Client *i, XPropertyEvent *ev);
 static pid_t winpid(Window w);
 static Client *wintosystrayicon(Window w);
 static void xinitvisual();
+static void xrdb(const Arg *arg);
 
 /* variables */
 static const char broken[] = "broken";
@@ -4240,6 +4259,55 @@ is_a_tmux_server(pid_t pid)
 }
 
 void
+loadxrdb()
+{
+	Display *display;
+	char * resm;
+	XrmDatabase xrdb;
+	char *type;
+	XrmValue value;
+
+	display = XOpenDisplay(NULL);
+
+	if (display != NULL) {
+		resm = XResourceManagerString(display);
+
+		if (resm != NULL) {
+			xrdb = XrmGetStringDatabase(resm);
+
+			if (xrdb != NULL) {
+				XRDB_LOAD_COLOR("dwm.bar_fg",  bar_fg);
+				XRDB_LOAD_COLOR("dwm.bar_bg",  bar_bg);
+				XRDB_LOAD_COLOR("dwm.bar_brd", bar_brd);
+				XRDB_LOAD_COLOR("dwm.bar_flo", bar_flo);
+				XRDB_LOAD_COLOR("dwm.tag_fg",  tag_fg);
+				XRDB_LOAD_COLOR("dwm.tag_bg",  tag_bg);
+				XRDB_LOAD_COLOR("dwm.tag_brd", tag_brd);
+				XRDB_LOAD_COLOR("dwm.tag_flo", tag_flo);
+				XRDB_LOAD_COLOR("dwm.brd_fg",  brd_fg);
+				XRDB_LOAD_COLOR("dwm.brd_bg",  brd_bg);
+				XRDB_LOAD_COLOR("dwm.brd_brd", brd_brd);
+				XRDB_LOAD_COLOR("dwm.brd_flo", brd_flo);
+				XRDB_LOAD_COLOR("dwm.sel_fg",  sel_fg);
+				XRDB_LOAD_COLOR("dwm.sel_bg",  sel_bg);
+				XRDB_LOAD_COLOR("dwm.sel_brd", sel_brd);
+				XRDB_LOAD_COLOR("dwm.sel_flo", sel_flo);
+				XRDB_LOAD_COLOR("dwm.foc_fg",  foc_fg);
+				XRDB_LOAD_COLOR("dwm.foc_bg",  foc_bg);
+				XRDB_LOAD_COLOR("dwm.foc_brd", foc_brd);
+				XRDB_LOAD_COLOR("dwm.foc_flo", foc_flo);
+				XRDB_LOAD_COLOR("dwm.unf_fg",  unf_fg);
+				XRDB_LOAD_COLOR("dwm.unf_bg",  unf_bg);
+				XRDB_LOAD_COLOR("dwm.unf_brd", unf_brd);
+				XRDB_LOAD_COLOR("dwm.unf_flo", unf_flo);
+				XrmDestroyDatabase(xrdb);
+			}
+		}
+	}
+	XCloseDisplay(display);
+}
+
+void
 mirrorlayout(const Arg *arg) {
 	if(!selmon->lt[selmon->sellt]->arrange)
 		return;
@@ -5079,6 +5147,17 @@ xinitvisual()
 	}
 }
 
+void
+xrdb(const Arg *arg)
+{
+	loadxrdb();
+	int i;
+	for (i = 0; i < LENGTH(colors); i++)
+		scheme[i] = drw_scm_create(drw, colors[i], alphas[i], 4);
+	focus(NULL);
+	arrange(NULL);
+}
+
 int
 main(int argc, char *argv[])
 {
@@ -5093,6 +5172,8 @@ main(int argc, char *argv[])
 	if (!(xcon = XGetXCBConnection(dpy)))
 		die("dwm: cannot get xcb connection\n");
 	checkotherwm();
+	XrmInitialize();
+	loadxrdb();
 	setup();
 #ifdef __OpenBSD__
 	if (pledge("stdio rpath proc exec ps", NULL) == -1)
