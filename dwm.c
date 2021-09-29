@@ -295,8 +295,10 @@ static int getdwmblockspid();
 static XImage *geticonprop(Window win);
 static pid_t getparentprocess(pid_t p);
 static unsigned int getsystraywidth();
+static long get_tmux_client_pid(long shell_pid);
 static void inplacerotate(const Arg *arg);
-static int isdescprocess(pid_t p, pid_t c);
+static int isdescprocess(pid_t parent, pid_t child);
+static int is_a_tmux_server(pid_t pid);
 static void mirrorlayout(const Arg *arg);
 static Client *nexttagged(Client *c);
 static void notifyhandler(const Arg *arg);
@@ -4103,7 +4105,7 @@ getparentprocess(pid_t p)
 	if (!(f = fopen(buf, "r")))
 		return 0;
 
-	fscanf(f, "%*u %*s %*c %u", &v);
+	fscanf(f, "%*u (%*[^)]) %*c %u", &v);
 	fclose(f);
 #endif /* __linux__*/
 
@@ -4131,6 +4133,21 @@ getsystraywidth()
 	if (showsystray)
 		for (i = systray->icons; i; w += i->w + systrayspacing, i = i->next);
 	return w ? w + systrayspacing : 0;
+}
+
+/* parameter "shell_pid" is the pid of a direct child
+ * of the tmux's server process, which usually is a shell process. */
+long
+get_tmux_client_pid(long shell_pid)
+{
+	long pane_pid, client_pid;
+	FILE* list = popen("tmux list-clients -F '#{pane_pid} #{client_pid}'", "r");
+	if (!list)
+		return 0;
+	while (!feof(list) && pane_pid != shell_pid)
+		fscanf(list, "%ld %ld\n", &pane_pid, &client_pid);
+	pclose(list);
+	return client_pid;
 }
 
 void
@@ -4192,12 +4209,34 @@ inplacerotate(const Arg *arg)
 }
 
 int
-isdescprocess(pid_t p, pid_t c)
+isdescprocess(pid_t parent, pid_t child)
 {
-	while (p != c && c != 0)
-		c = getparentprocess(c);
+	pid_t parent_tmp;
+	while (child != parent && child != 0) {
+		parent_tmp = getparentprocess(child);
+		if (is_a_tmux_server(parent_tmp))
+			child = get_tmux_client_pid(child);
+		else
+			child = parent_tmp;
+	}
+	return (int)child;
+}
 
-	return (int)c;
+int
+is_a_tmux_server(pid_t pid)
+{
+	char path[256];
+	char name[15];
+	FILE* stat;
+
+	snprintf(path, sizeof(path) - 1, "/proc/%u/stat", (unsigned)pid);
+
+	if (!(stat = fopen(path, "r")))
+		return 0;
+
+	fscanf(stat, "%*u (%12[^)])", name);
+	fclose(stat);
+	return (strcmp(name, "tmux: server") == 0);
 }
 
 void
