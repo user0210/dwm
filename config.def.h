@@ -275,5 +275,6 @@ static Button buttons[] = {
 	{ ClkTagBar,			MODKEY,			Button1,		tag,				{0} },
 	{ ClkTagBar,			MODKEY,			Button3,		toggletag,			{0} },
 	{ ClkNotifyText,		0,				Button1,		notifyhandler,		{.i = 1 } },
+	{ ClkRootWin,			0,				Button1,		dragfact,			{0} },
 };
 
