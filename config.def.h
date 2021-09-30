@@ -63,6 +63,7 @@ static const char dmenufont[]		= "monospace:pixelsize=16";
 static const char *fonts[]			= { dmenufont };
 static const char istatusprefix[]	= "msg: ";			/* prefix for important status messages */
 static const char istatusclose[]	= "msg:close";		/* prefix to close messages */
+static const char icommandprefix[]	= "dwm:cmd ";		/* prefix for commands */
 static const char slopspawnstyle[]	= "-t 0 -l -c 0.92,0.85,0.69,0.3 -o";	/* do NOT define -f (format) here */
 static const char slopresizestyle[]	= "-t 0 -l -c 0.92,0.85,0.69,0.3 -o";	/* do NOT define -f (format) here */
 
@@ -197,6 +198,14 @@ static char dmenugap[16] = "0";
 static char dmenulen[16] = "0";
 static const char *dmenucmd[] = { "dmenu_run", "-m", dmenumon, "-fn", dmenufont, "-x", dmenugap, "-y", dmenugap, "-z", dmenulen, "-nb", bar_bg, "-nf", bar_fg, "-sb", foc_bg, "-sf", foc_fg, NULL };
 static const char *termcmd[]  = { "st", NULL };
+
+
+/* xsetroot fake commands */
+static const Command commands[]		= {
+	/* command		function		argument */
+	{ "xrdb",		xrdb,			{.v = NULL }	},
+	{ "kill",		killclient,		{0}  			},
+};
 
 
 /* keymap */

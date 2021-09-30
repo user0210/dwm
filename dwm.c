@@ -168,6 +168,12 @@ typedef struct {
 	void (*arrange)(Monitor *);
 } Layout;
 
+typedef struct {
+	const char *cmd;
+	void (*func)(const Arg *);
+	const Arg arg;
+} Command;
+
 typedef struct Pertag Pertag;
 
 typedef struct {
@@ -300,6 +306,7 @@ static void attachaside(Client *c);
 static void attachbelow(Client *c);
 static void attachbottom(Client *c);
 static void attachtop(Client *c);
+static void commander(char *notif);
 static void copyvalidchars(char *text, char *rawtext);
 static void dragfact(const Arg *arg);
 static void drawebar(char *text, Monitor *m, int xpos);
@@ -3329,6 +3336,8 @@ updatestatus(void)
 			istatustimer = 0;
 			strncpy(rawstext, stext, sizeof(stext));
 			drawebar(rawstext, selmon, 0);
+		} else if (strncmp(icommandprefix, rawtext, strlen(icommandprefix)) == 0) {
+			commander(rawtext + sizeof(char) * strlen(icommandprefix));
 		} else if (strncmp(istatusprefix, rawtext, strlen(istatusprefix)) == 0) {
 			strncpy(stext, rawstext, sizeof(rawstext));
 			system("kill -48 $(pidof dwmblocks)");
@@ -3606,6 +3615,15 @@ findbefore(Client *c) {
 		return NULL;
 	for (p = c->mon->clients; p && p->next != c; p = p->next);
 	return p;
+}
+
+void
+commander(char *notif)
+{
+	int i;
+	for (i = 0; i < LENGTH(commands); i++)
+		if (strcmp (notif, commands[i].cmd) == 0 && commands[i].func)
+			commands[i].func(&(commands[i].arg));
 }
 
 void
