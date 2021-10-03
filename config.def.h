@@ -117,6 +117,11 @@ static const Layout layouts[]		= {
 	{ "[M]",		monocle },
 };
 
+static const int  layoutaxis[] = {
+	1,    /* layout axis: 1 = x, 2 = y; negative values mirror the layout */
+	2,    /* master axis: 1 = x (left to right), 2 = y (top to bottom), 3 = z (monocle) */
+	2,    /* stack  axis: 1 = x (left to right), 2 = y (top to bottom), 3 = z (monocle) */
+};
 
 /* rules */
 static const Rule rules[] = {
@@ -162,6 +167,9 @@ static Key keys[] = {
 	{ MODKEY|ControlMask,			XK_d,				incnmaster,				{.i = -1 } },
 	{ MODKEY|ControlMask,			XK_h,				setmfact,				{.f = -0.05} },
 	{ MODKEY|ControlMask,			XK_l,				setmfact,				{.f = +0.05} },
+	{ MODKEY|ControlMask,			XK_k,				setcfact,				{.f = +0.25} },
+	{ MODKEY|ControlMask,			XK_j,				setcfact,				{.f = -0.25} },
+	{ MODKEY|ControlMask,			XK_o,				setcfact,				{.f =  0.00} },
 	{ MODKEY|ControlMask,			XK_z,				zoom,					{0} },
 	{ MODKEY,						XK_Tab,				view,					{0} },
 	{ MODKEY|ShiftMask,				XK_q,				killclient,				{0} },
@@ -169,6 +177,10 @@ static Key keys[] = {
 	{ MODKEY,						XK_f,				setlayout,				{.v = &layouts[1]} },
 	{ MODKEY,						XK_m,				setlayout,				{.v = &layouts[2]} },
 	{ MODKEY|ControlMask,			XK_space,			setlayout,				{0} },
+	{ MODKEY|ControlMask|ShiftMask,	XK_t,				rotatelayoutaxis,		{.i = 0} },			/* 0 = layout axis */
+	{ MODKEY|ShiftMask,				XK_t,				rotatelayoutaxis,		{.i = 1} },			/* 1 = master axis */
+	{ MODKEY|ControlMask,			XK_t,				rotatelayoutaxis,		{.i = 2} },			/* 2 = stack axis */
+	{ MODKEY|ControlMask,			XK_m,				mirrorlayout,			{0} },
 	{ MODKEY,						XK_space,			togglefloating,			{0} },
 	{ MODKEY,						XK_0,				view,					{.ui = ~0 } },
 	{ MODKEY|ShiftMask,				XK_0,				tag,					{.ui = ~0 } },
