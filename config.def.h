@@ -219,6 +219,10 @@ static Key keys[] = {
 	{ MODKEY,						XK_b,				togglebars,				{0} },
 	{ MODKEY|ControlMask,			XK_b,				togglebar,				{0} },
 	{ MODKEY|ControlMask|ShiftMask,	XK_b,				toggleebar,				{0} },
+	{ MODKEY,						XK_h,				focusdir,				{.i = 0 } },		/* left */
+	{ MODKEY,						XK_l,				focusdir,				{.i = 1 } },		/* right */
+	{ MODKEY,						XK_k,				focusdir,				{.i = 2 } },		/* up */
+	{ MODKEY,						XK_j,				focusdir,				{.i = 3 } },		/* down */
 	{ MODKEY,						XK_n,				focusstack,				{.i = +1 } },
 	{ MODKEY,						XK_p,				focusstack,				{.i = -1 } },
 	{ MODKEY|ShiftMask,				XK_n,				inplacerotate,			{.i = +1} },
