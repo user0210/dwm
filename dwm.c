@@ -317,6 +317,7 @@ static void switchtag(const Arg *arg);
 static Monitor *systraytomon(Monitor *m);
 static void toggleebar(const Arg *arg);
 static void togglebars(const Arg *arg);
+static void transfer(const Arg *arg);
 static void updateicon(Client *c);
 static void updatesystray(void);
 static void updatesystrayicongeom(Client *i, int w, int h);
@@ -3985,6 +3986,40 @@ systraytomon(Monitor *m)
 	if (systraypinningfailfirst && n < systraypinning)
 		return mons;
 	return t;
+}
+
+void
+transfer(const Arg *arg)
+{
+	Client *c, *mtail = selmon->clients, *stail = NULL, *insertafter;
+	int transfertostack = 0, i, nmasterclients;
+
+	for (i = 0, c = selmon->clients; c; c = c->next) {
+		if (!ISVISIBLE(c) || c->isfloating) continue;
+		if (selmon->sel == c) { transfertostack = i < selmon->nmaster && selmon->nmaster != 0; }
+		if (i < selmon->nmaster) { nmasterclients++; mtail = c; }
+		stail = c;
+		i++;
+	}
+	if (!selmon->sel || selmon->sel->isfloating || i == 0) {
+		return;
+	} else if (transfertostack) {
+		selmon->nmaster = MIN(i, selmon->nmaster) - 1;
+		insertafter = stail;
+	} else {
+		selmon->nmaster = selmon->nmaster + 1;
+		insertafter = mtail;
+	}
+	if (insertafter != selmon->sel) {
+		detach(selmon->sel);
+		if (selmon->nmaster == 1 && !transfertostack) {
+		 attach(selmon->sel); // Head prepend case
+		} else {
+			selmon->sel->next = insertafter->next;
+			insertafter->next = selmon->sel;
+		}
+	}
+	arrange(selmon);
 }
 
 void
