@@ -386,6 +386,8 @@ static void updatepreview(void);
 static void updatesystray(void);
 static void updatesystrayicongeom(Client *i, int w, int h);
 static void updatesystrayiconstate(Client *i, XPropertyEvent *ev);
+static void windowmove(const Arg *arg);
+static void windowsize(const Arg *arg);
 static pid_t winpid(Window w);
 static Client *wintosystrayicon(Window w);
 static void xinitvisual();
@@ -5904,6 +5906,96 @@ updatesystrayiconstate(Client *i, XPropertyEvent *ev)
 		return;
 	sendevent(i->win, xatom[Xembed], StructureNotifyMask, CurrentTime, code, 0,
 			systray->win, XEMBED_EMBEDDED_VERSION);
+}
+
+void
+windowmove(const Arg *arg)
+{
+	Client *c = selmon->sel;
+	Arg pos_arg;
+	char pos[32];
+
+	if (!c)
+		return;
+	if (c->isfloating) {
+		if (arg->i == 0)
+			snprintf(pos, sizeof(pos), "-%sa 0a", pospx);
+		if (arg->i == 1)
+			snprintf(pos, sizeof(pos), "%sa 0a", pospx);
+		if (arg->i == 2)
+			snprintf(pos, sizeof(pos), "0a -%sa", pospx);
+		if (arg->i == 3)
+			snprintf(pos, sizeof(pos), "0a %sa", pospx);
+		pos_arg.v = pos;
+		floatpos(&pos_arg);
+	} else
+		placedir(arg);
+}
+
+void
+windowsize(const Arg *arg)
+{
+	Client *c = selmon->sel;
+	Arg size_arg, m_arg, c_arg, mn_arg, cn_arg;
+	char pos[32];
+
+	m_arg.f = mset;
+	c_arg.f = cset;
+	mn_arg.f = -m_arg.f;
+	cn_arg.f = -c_arg.f;
+
+	if (!c)
+		return;
+	if (c->isfloating) {
+		if (arg->i == 0)
+			snprintf(pos, sizeof(pos), "-%sw 0h", pospx);
+		if (arg->i == 1)
+			snprintf(pos, sizeof(pos), "%sw 0h", pospx);
+		if (arg->i == 2)
+			snprintf(pos, sizeof(pos), "0w -%sh", pospx);
+		if (arg->i == 3)
+			snprintf(pos, sizeof(pos), "0w %sh", pospx);
+		size_arg.v = pos;
+		floatpos(&size_arg);
+	} else {
+		if ((selmon->ltaxis[0]) == 1) {
+			if (arg->i == 0)
+				setmfact(&mn_arg);
+			if (arg->i == 1)
+				setmfact(&m_arg);
+			if (arg->i == 2)
+				setcfact(&c_arg);
+			if (arg->i == 3)
+				setcfact(&cn_arg);
+		} else if ((selmon->ltaxis[0]) == -1) {
+			if (arg->i == 0)
+				setmfact(&m_arg);
+			if (arg->i == 1)
+				setmfact(&mn_arg);
+			if (arg->i == 2)
+				setcfact(&c_arg);
+			if (arg->i == 3)
+				setcfact(&cn_arg);
+		} else if ((selmon->ltaxis[0]) == 2) {
+			if (arg->i == 0)
+				setcfact(&cn_arg);
+			if (arg->i == 1)
+				setcfact(&c_arg);
+			if (arg->i == 2)
+				setmfact(&m_arg);
+			if (arg->i == 3)
+				setmfact(&mn_arg);
+		} else if ((selmon->ltaxis[0]) == -2) {
+			if (arg->i == 0)
+				setcfact(&cn_arg);
+			if (arg->i == 1)
+				setcfact(&c_arg);
+			if (arg->i == 2)
+				setmfact(&mn_arg);
+			if (arg->i == 3)
+				setmfact(&m_arg);
+		}
+	}
 }
 
 pid_t

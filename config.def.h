@@ -244,6 +244,9 @@ static const Command commands[]		= {
 
 
 /* keymap */
+static const float mset				= 0.05;		/* resize m-fact */
+static const float cset				= 0.25;		/* resize c-fact */
+static char pospx[16]				= "25";		/* change in pixel for floatpos */
 static Key keys[] = {
 	/* modifier						key					function				argument */
 	{ MODKEY|ControlMask|ShiftMask,	XK_Return,			spawn,					SHCMD(notifymenu) },
@@ -269,15 +272,7 @@ static Key keys[] = {
 	{ MODKEY|ControlMask,			XK_p,				inplacerotate,			{.i = -2} },
 	{ MODKEY|ControlMask,			XK_i,				incnmaster,				{.i = +1 } },
 	{ MODKEY|ControlMask,			XK_d,				incnmaster,				{.i = -1 } },
-	{ MODKEY|ControlMask,			XK_h,				setmfact,				{.f = -0.05} },
-	{ MODKEY|ControlMask,			XK_l,				setmfact,				{.f = +0.05} },
-	{ MODKEY|ControlMask,			XK_k,				setcfact,				{.f = +0.25} },
-	{ MODKEY|ControlMask,			XK_j,				setcfact,				{.f = -0.25} },
 	{ MODKEY|ControlMask,			XK_o,				setcfact,				{.f =  0.00} },
-	{ MODKEY|ShiftMask,				XK_h,				placedir,				{.i = 0 } },		/* left */
-	{ MODKEY|ShiftMask,				XK_l,				placedir,				{.i = 1 } },		/* right */
-	{ MODKEY|ShiftMask,				XK_k,				placedir,				{.i = 2 } },		/* up */
-	{ MODKEY|ShiftMask,				XK_j,				placedir,				{.i = 3 } },		/* down */
 	{ MODKEY|ControlMask,			XK_z,				zoom,					{0} },
 	{ MODKEY|ShiftMask,				XK_z,				transfer,				{0} },
 	{ MODKEY|ControlMask,			XK_Tab,				switchcol,				{0} },
@@ -317,21 +312,25 @@ static Key keys[] = {
     { MODKEY|ControlMask|ALT,		XK_l,				switchtag,				{ .ui = SWITCHTAG_RIGHT  | SWITCHTAG_TAG | SWITCHTAG_VIEW } },
     { MODKEY|ControlMask|ALT,		XK_h,				switchtag,				{ .ui = SWITCHTAG_LEFT   | SWITCHTAG_TAG | SWITCHTAG_VIEW } },
 
-	/* a|a) absolute position, x|y) no bar overlap and only this monitor		        a/x  a/y					*/
-	{ MODKEY|ShiftMask,				XK_Up,				floatpos,				{.v = "  0a -26a" } },			// ↑
-	{ MODKEY|ShiftMask,				XK_Left,			floatpos,				{.v = "-26a   0a" } },			// ←
-	{ MODKEY|ShiftMask,				XK_Right,			floatpos,				{.v = " 26a   0a" } },			// →
-	{ MODKEY|ShiftMask,				XK_Down,			floatpos,				{.v = "  0a  26a" } },			// ↓
-	/* w|h) Resize client, W|H) absolute size											w|W  h|H					*/
-	{ MODKEY|ControlMask,			XK_Up,				floatpos,				{.v = "  0w -26h" } },			// ↑
-	{ MODKEY|ControlMask,			XK_Left,			floatpos,				{.v = "-26w   0h" } },			// ←
-	{ MODKEY|ControlMask,			XK_Right,			floatpos,				{.v = " 26w   0h" } },			// →
-	{ MODKEY|ControlMask,			XK_Down,			floatpos,				{.v = "  0w  26h" } },			// ↓
-	/* maximize in direction																						*/
+	{ MODKEY|ControlMask,			XK_h,				windowsize,				{.i = 0 } },		/* left */
+	{ MODKEY|ControlMask,			XK_l,				windowsize,				{.i = 1 } },		/* right */
+	{ MODKEY|ControlMask,			XK_k,				windowsize,				{.i = 2 } },		/* up */
+	{ MODKEY|ControlMask,			XK_j,				windowsize,				{.i = 3 } },		/* down */
+	{ MODKEY|ShiftMask,				XK_h,				windowmove,				{.i = 0 } },		/* left */
+	{ MODKEY|ShiftMask,				XK_l,				windowmove,				{.i = 1 } },		/* right */
+	{ MODKEY|ShiftMask,				XK_k,				windowmove,				{.i = 2 } },		/* up */
+	{ MODKEY|ShiftMask,				XK_j,				windowmove,				{.i = 3 } },		/* down */
 	{ MODKEY|ControlMask|ShiftMask,	XK_Up,				floatpos,				{.v = " 0x  0Z   0%   0%" } },	// ↑
 	{ MODKEY|ControlMask|ShiftMask,	XK_Left,			floatpos,				{.v = " 0Z  0y   0%   0%" } },	// ←
 	{ MODKEY|ControlMask|ShiftMask,	XK_Right,			floatpos,				{.v = "-1S  0y 100%   0%" } },	// →
 	{ MODKEY|ControlMask|ShiftMask,	XK_Down,			floatpos,				{.v = " 0x -1S   0% 100%" } },	// ↓
+
+//	/* maximize in direction																						*/
+//	{ MODKEY|ControlMask|ShiftMask,	XK_Up,				floatpos,				{.v = " 0x  0Z   0%   0%" } },	// ↑
+//	/* a|a) absolute position, x|y) no bar overlap and only this monitor		        a/x  a/y					*/
+//	{ MODKEY|ShiftMask,				XK_Up,				floatpos,				{.v = "  0a -26a" } },			// ↑
+//	/* w|h) Resize client, W|H) absolute size											w|W  h|H					*/
+//	{ MODKEY|ControlMask,			XK_Up,				floatpos,				{.v = "  0w -26h" } },			// ↑
 //	/* move one position up in grid... 																				*/
 //	{ ???,							???,				floatpos,				{.v = " 0p -1p" } },			// ↑
 //	/* corner and center positioning... (center)																	*/
