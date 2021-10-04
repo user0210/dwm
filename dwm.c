@@ -501,7 +501,7 @@ void
 applyrules(Client *c)
 {
 	const char *class, *instance;
-	unsigned int i, newtagset;
+	unsigned int i, newtagset, match = 0;
 	const Rule *r;
 	Monitor *m;
 	XClassHint ch = { NULL, NULL };
@@ -517,8 +517,10 @@ applyrules(Client *c)
 		r = &rules[i];
 		if ((!r->title || strstr(c->name, r->title))
 		&& (!r->class || strstr(class, r->class))
-		&& (!r->instance || strstr(instance, r->instance)))
+		&& (!r->instance || strstr(instance, r->instance))
+		&& !match)
 		{
+			match = 1;
 			c->isterminal = r->isterminal;
 			c->noswallow  = r->noswallow;
 			c->isfloating = r->isfloating;
@@ -528,7 +530,7 @@ applyrules(Client *c)
 			for (m = mons; m && m->num != r->monitor; m = m->next);
 			if (m)
 				c->mon = m;
-			if (c->isfloating && r->floatpos)
+			if (r->floatpos)
 				setfloatpos(c, r->floatpos);
 			if (r->switchtag) {
 				selmon = c->mon;
@@ -2502,9 +2504,7 @@ setfullscreen(Client *c, int fullscreen)
 	}
 	c->isfullscreen = fullscreen;
 	if (savestate && !(c->oldstate & (1 << 1))) {
-		c->oldbw = c->bw;
 		c->oldstate = c->isfloating | (1 << 1);
-		c->bw = 0;
 		c->isfloating = 1;
 		resizeclient(c, c->mon->mx, c->mon->my, c->mon->mw, c->mon->mh, -1);
 		XRaiseWindow(dpy, c->win);
@@ -5145,6 +5145,9 @@ setfloatpos(Client *c, const char *floatpos)
 		return;
 	if (selmon->lt[selmon->sellt]->arrange && !c->isfloating)
 		return;
+	if (c->isfloating && c->floatborderpx >= 0)
+		c->bw = c->floatborderpx;
+
 	switch(sscanf(floatpos, "%d%c %d%c %d%c %d%c", &x, &xCh, &y, &yCh, &w, &wCh, &h, &hCh)) {
 		case 4:
 			if (xCh == 'w' || xCh == 'W') {

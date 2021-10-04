@@ -206,6 +206,7 @@ static const Rule rules[] = {
 	{ "Firefox",		NULL,			NULL,		1 << 8,		1,			0,			1,			0,			-1,			-1, 		-1,			NULL				},
 	{ "st",				NULL,			NULL,		0,			0,			0,			0,			1,			-1,			-1, 		-1,			NULL				},
 	{ NULL,				NULL,	"Event Tester",		0,			0,			1,			0,			0,			1,			-1, 		-1,			NULL				},	/* xev */
+	{ NULL,				NULL,			NULL,		0,			0,			0,			0,			0,			0,			-1,			-1,			"50% 50% 0w% 0w%"	},	/* default (last!)*/
 };
 
 
@@ -310,15 +311,15 @@ static Key keys[] = {
     { MODKEY|ControlMask|ALT,		XK_h,				switchtag,				{ .ui = SWITCHTAG_LEFT   | SWITCHTAG_TAG | SWITCHTAG_VIEW } },
 
 	/* a|a) absolute position, x|y) no bar overlap and only this monitor		        a/x  a/y					*/
-	{ MODKEY,						XK_Up,				floatpos,				{.v = "  0a -26a" } },			// ↑
-	{ MODKEY,						XK_Left,			floatpos,				{.v = "-26a   0a" } },			// ←
-	{ MODKEY,						XK_Right,			floatpos,				{.v = " 26a   0a" } },			// →
-	{ MODKEY,						XK_Down,			floatpos,				{.v = "  0a  26a" } },			// ↓
+	{ MODKEY|ShiftMask,				XK_Up,				floatpos,				{.v = "  0a -26a" } },			// ↑
+	{ MODKEY|ShiftMask,				XK_Left,			floatpos,				{.v = "-26a   0a" } },			// ←
+	{ MODKEY|ShiftMask,				XK_Right,			floatpos,				{.v = " 26a   0a" } },			// →
+	{ MODKEY|ShiftMask,				XK_Down,			floatpos,				{.v = "  0a  26a" } },			// ↓
 	/* w|h) Resize client, W|H) absolute size											w|W  h|H					*/
-	{ MODKEY|ShiftMask,				XK_Up,				floatpos,				{.v = "  0w -26h" } },			// ↑
-	{ MODKEY|ShiftMask,				XK_Left,			floatpos,				{.v = "-26w   0h" } },			// ←
-	{ MODKEY|ShiftMask,				XK_Right,			floatpos,				{.v = " 26w   0h" } },			// →
-	{ MODKEY|ShiftMask,				XK_Down,			floatpos,				{.v = "  0w  26h" } },			// ↓
+	{ MODKEY|ControlMask,			XK_Up,				floatpos,				{.v = "  0w -26h" } },			// ↑
+	{ MODKEY|ControlMask,			XK_Left,			floatpos,				{.v = "-26w   0h" } },			// ←
+	{ MODKEY|ControlMask,			XK_Right,			floatpos,				{.v = " 26w   0h" } },			// →
+	{ MODKEY|ControlMask,			XK_Down,			floatpos,				{.v = "  0w  26h" } },			// ↓
 	/* maximize in direction																						*/
 	{ MODKEY|ControlMask|ShiftMask,	XK_Up,				floatpos,				{.v = " 0x  0Z   0%   0%" } },	// ↑
 	{ MODKEY|ControlMask|ShiftMask,	XK_Left,			floatpos,				{.v = " 0Z  0y   0%   0%" } },	// ←
