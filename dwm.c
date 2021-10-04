@@ -4144,6 +4144,16 @@ drawtaggrid(Monitor *m, int *x_pos, unsigned int occ)
 void
 focusdir(const Arg *arg)
 {
+	if (selmon->lt[selmon->sellt]->arrange == monocle) {
+		Arg new_arg, newn_arg;
+		new_arg.i = 1;
+		newn_arg.i = -1;
+		if (arg->i == 0 || arg->i == 3)
+			focusstack(&newn_arg);
+		if (arg->i == 1 || arg->i == 2)
+			focusstack(&new_arg);
+		return;
+	}
 	Client *s = selmon->sel, *f = NULL, *c, *next;
 	if (!s)
 		return;
