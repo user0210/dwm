@@ -41,8 +41,11 @@ static const char *barorder[]		= {
 //	"seperator",								/*	 |	*/
 	"tagbar",
 	"ltsymbol",
-	"bartab",
-	"status",
+	"bartab", 									/* FIXED ON "EBAR" - sepparates left and right allignment */
+""};
+
+static const char *ebarorder[] = {
+	"status", 									/* FIXED ON "EBAR" - sepparates left and right allignment */
 ""};
 
 
@@ -54,6 +57,7 @@ static const int borderpx			= 1;		/* border pixel of windows */
 static const int gappx				= 4;		/* gaps between windows */
 static const int snap				= 32;		/* snap pixel */
 static const int showbar			= 1;		/* 0 means no bar */
+static const int showebar           = 1;        /* 0 means no extra bar */
 static const int topbar				= 1;		/* 0 means bottom bar */
 
 static const char bar_fg[]			= "#bbbbbb";
@@ -161,7 +165,9 @@ static Key keys[] = {
 	/* modifier						key					function				argument */
 	{ MODKEY,						XK_Return,			spawn,					{.v = dmenucmd } },
 	{ MODKEY|ShiftMask,				XK_Return,			spawn,					{.v = termcmd } },
-	{ MODKEY,						XK_b,				togglebar,				{0} },
+	{ MODKEY,						XK_b,				togglebars,				{0} },
+	{ MODKEY|ControlMask,			XK_b,				togglebar,				{0} },
+	{ MODKEY|ControlMask|ShiftMask,	XK_b,				toggleebar,				{0} },
 	{ MODKEY,						XK_n,				focusstack,				{.i = +1 } },
 	{ MODKEY,						XK_p,				focusstack,				{.i = -1 } },
 	{ MODKEY|ControlMask,			XK_i,				incnmaster,				{.i = +1 } },
