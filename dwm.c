@@ -59,7 +59,7 @@
 
 /* enums */
 enum { CurNormal, CurResize, CurMove, CurLast }; /* cursor */
-enum { SchemeBar, SchemeSelect, SchemeBorder }; /* color schemes */
+enum { SchemeBar, SchemeSelect, SchemeBorder, SchemeFocus }; /* color schemes */
 enum { NetSupported, NetWMName, NetWMState, NetWMCheck,
        NetWMFullscreen, NetActiveWindow, NetWMWindowType,
        NetWMWindowTypeDialog, NetClientList, NetLast }; /* EWMH atoms */
@@ -161,7 +161,7 @@ static void destroynotify(XEvent *e);
 static void detach(Client *c);
 static void detachstack(Client *c);
 static Monitor *dirtomon(int dir);
-static void drawbar(Monitor *m);
+static void drawbar(Monitor *m, int xpos);
 static void drawbars(void);
 static void enternotify(XEvent *e);
 static void expose(XEvent *e);
@@ -268,6 +268,9 @@ static Display *dpy;
 static Drw *drw;
 static Monitor *mons, *selmon;
 static Window root, wmcheckwin;
+
+/* patch - variables */
+unsigned int fsep = 0, fblock = 0;			/* focused bar item */
 
 /* configuration, allows nested code to access above variables */
 #include "config.h"
@@ -421,7 +424,7 @@ int buttontag(int x, int xpos, int click, Arg *arg) {
 
 	do
 		x += TEXTW(tags[i]);
-	while (xpos >= x && ++i < LENGTH(tags));
+	while (xpos > x && ++i < LENGTH(tags));
 	if(i < LENGTH(tags)) {
 		click = ClkTagBar;
 		arg->ui = 1 << i;
@@ -728,7 +731,7 @@ dirtomon(int dir)
 
 /* drawbar-functions */
 
-int drawsep(Monitor *m, int lr, int p, int s) {
+int drawsep(Monitor *m, int lr, int p, int xpos, int s) {
 	int len, sp, dot = 0;
 
 	dot = seppad < 0 ? 1 : 0;
@@ -741,6 +744,10 @@ int drawsep(Monitor *m, int lr, int p, int s) {
 
 	int x = p ? m->ww - len - lr : lr;
 
+	if (xpos && xpos > x && xpos <= x + len) {
+		fsep = x;
+		fblock = len;
+	}
 	if (s) {
 		XSetForeground(drw->dpy, drw->gc, scheme[SchemeBar][ColBg].pixel);
 		XFillRectangle(drw->dpy, drw->drawable, drw->gc, x, 0, len, bh);
@@ -756,7 +763,7 @@ int drawsep(Monitor *m, int lr, int p, int s) {
 	return lr + len;
 }
 
-int drawtag(Monitor *m, int lr, int p) {
+int drawtag(Monitor *m, int lr, int p, int xpos) {
 	tgw = lr;
 	int i, x, w = 0;
 	int boxs = drw->fonts->h / 9;
@@ -772,7 +779,17 @@ int drawtag(Monitor *m, int lr, int p) {
 	for (i = p ? LENGTH(tags) - 1 : 0; p ? i >= 0 : i < LENGTH(tags); p ? i-- : i++) {
 		w = TEXTW(tags[i]);
 		x = p ? m->ww - lr - w : lr;
-		drw_setscheme(drw, scheme[m->tagset[m->seltags] & 1 << i ? SchemeSelect : SchemeBar]);
+
+		if (xpos && xpos > x && xpos <= x + w) {
+			fsep = x;
+			fblock = w;
+		}
+		if (m->tagset[m->seltags] & 1 << i)
+			drw_setscheme(drw, scheme[SchemeSelect]);
+		else if (x == fsep && w == fblock && w)
+			drw_setscheme(drw, scheme[SchemeFocus]);
+		else
+			drw_setscheme(drw, scheme[SchemeBar]);
 		drw_text(drw, x, 0, w, bh, lrpad / 2, tags[i], urg & 1 << i);
 		if (occ & 1 << i)
 			drw_rect(drw, x + boxs, boxs, boxw, boxw,
@@ -784,10 +801,14 @@ int drawtag(Monitor *m, int lr, int p) {
 	return lr;
 }
 
-int drawstatus(char* stext, Monitor *m, int lr, int p) {
+int drawstatus(char* stext, Monitor *m, int lr, int p, int xpos) {
 	saw = TEXTW(stext) - lrpad + 2; /* 2px right padding */
 	int x = p ? m->ww - saw - lr : lr;
 
+	if (xpos && xpos > x && xpos <= x + saw) {
+		fsep = x;
+		fblock = saw;
+	}
 	if (m == selmon) { /* status is only drawn on selected monitor */
 		drw_setscheme(drw, scheme[SchemeBar]);
 		drw_text(drw, x, 0, saw, bh, 0, stext, 0);
@@ -795,17 +816,24 @@ int drawstatus(char* stext, Monitor *m, int lr, int p) {
 	return lr + saw;
 }
 
-int drawltsymbol(Monitor *m, int lr, int p) {
+int drawltsymbol(Monitor *m, int lr, int p, int xpos) {
 	blw = TEXTW(m->ltsymbol);
 	int x = p ? m->ww - blw - lr : lr;
 
-	drw_setscheme(drw, scheme[SchemeBar]);
+	if (xpos && xpos > x && xpos <= x + blw) {
+		fsep = x;
+		fblock = blw;
+	}
+	if (x == fsep && blw == fblock && blw)
+		drw_setscheme(drw, scheme[SchemeFocus]);
+	else
+		drw_setscheme(drw, scheme[SchemeBar]);
 	drw_text(drw, x, 0, blw, bh, lrpad / 2, m->ltsymbol, 0);
 
 	return lr + blw;
 }
 
-void drawbartab(Monitor *m, int l, int r) {
+void drawbartab(Monitor *m, int l, int r, int xpos) {
 	int w, x = l;
 	int boxs = drw->fonts->h / 9;
 	int boxw = drw->fonts->h / 6 + 2;
@@ -821,10 +849,14 @@ void drawbartab(Monitor *m, int l, int r) {
 			drw_rect(drw, x, 0, w, bh, 1, 1);
 		}
 	}
+	if (xpos && xpos > x && xpos <= x + w) {
+		fsep = x;
+		fblock = w;
+	}
 }
 
 void
-drawbar(Monitor *m)
+drawbar(Monitor *m, int xpos)
 {
 	int i, len, l = 0, r = 0, lr = 0, pos = 0;
 
@@ -839,19 +871,19 @@ drawbar(Monitor *m)
 			else {r = lr; break;}
 		}
 		if (strcmp ("status", barorder[i]) == 0)
-			lr = drawstatus(stext, m, lr, pos);
+			lr = drawstatus(stext, m, lr, pos, xpos);
 		if (strcmp ("tagbar", barorder[i]) == 0)
-			lr = drawtag(m, lr, pos);
+			lr = drawtag(m, lr, pos, xpos);
 		if (strcmp ("ltsymbol", barorder[i]) == 0)
-			lr = drawltsymbol(m, lr, pos);
+			lr = drawltsymbol(m, lr, pos, xpos);
 		if (strcmp ("sepgap", barorder[i]) == 0)
-			lr = drawsep(m, lr, pos, 3);
+			lr = drawsep(m, lr, pos, xpos, 3);
 		if (strcmp ("gap", barorder[i]) == 0)
-			lr = drawsep(m, lr, pos, 2);
+			lr = drawsep(m, lr, pos, xpos, 2);
 		if (strcmp ("seperator", barorder[i]) == 0)
-			lr = drawsep(m, lr, pos, 1);
+			lr = drawsep(m, lr, pos, xpos, 1);
 	}
-	drawbartab(m, l, r);
+	drawbartab(m, l, r, xpos);
 	drw_map(drw, m->barwin, 0, 0, m->ww, bh);
 }
 
@@ -861,7 +893,7 @@ drawbars(void)
 	Monitor *m;
 
 	for (m = mons; m; m = m->next)
-		drawbar(m);
+		drawbar(m, 0);
 }
 
 void
@@ -870,6 +902,10 @@ enternotify(XEvent *e)
 	Client *c;
 	Monitor *m;
 	XCrossingEvent *ev = &e->xcrossing;
+
+	fblock = fsep = 0;
+	if (ev->window != selmon->barwin)
+		drawbar(selmon, 0);
 
 	if ((ev->mode != NotifyNormal || ev->detail == NotifyInferior) && ev->window != root)
 		return;
@@ -890,7 +926,7 @@ expose(XEvent *e)
 	XExposeEvent *ev = &e->xexpose;
 
 	if (ev->count == 0 && (m = wintomon(ev->window)))
-		drawbar(m);
+		drawbar(m, 0);
 }
 
 void
@@ -1102,6 +1138,10 @@ keypress(XEvent *e)
 	KeySym keysym;
 	XKeyEvent *ev;
 
+	if (fblock || fsep) {
+		fblock = fsep = 0;
+		drawbar(selmon, 0);
+	}
 	ev = &e->xkey;
 	keysym = XKeycodeToKeysym(dpy, (KeyCode)ev->keycode, 0);
 	for (i = 0; i < LENGTH(keys); i++)
@@ -1237,6 +1277,14 @@ motionnotify(XEvent *e)
 	Monitor *m;
 	XMotionEvent *ev = &e->xmotion;
 
+	if (ev->window == selmon->barwin) {
+		if (ev->x < fsep || ev->x > fsep + fblock) {
+			fblock = fsep = 0;
+			drawbar(selmon, ev->x);
+		} else
+			return;
+	}
+
 	if (ev->window != root)
 		return;
 	if ((m = recttomon(ev->x_root, ev->y_root, 1, 1)) != mon && mon) {
@@ -1353,7 +1401,7 @@ propertynotify(XEvent *e)
 		if (ev->atom == XA_WM_NAME || ev->atom == netatom[NetWMName]) {
 			updatetitle(c);
 			if (c == c->mon->sel)
-				drawbar(c->mon);
+				drawbar(c->mon, 0);
 		}
 		if (ev->atom == netatom[NetWMWindowType])
 			updatewindowtype(c);
@@ -1466,7 +1514,7 @@ restack(Monitor *m)
 	XEvent ev;
 	XWindowChanges wc;
 
-	drawbar(m);
+	drawbar(m, 0);
 	if (!m->sel)
 		return;
 	if (m->sel->isfloating || !m->lt[m->sellt]->arrange)
@@ -1623,7 +1671,7 @@ setlayout(const Arg *arg)
 	if (selmon->sel)
 		arrange(selmon);
 	else
-		drawbar(selmon);
+		drawbar(selmon, 0);
 }
 
 /* arg > 1.0 will set mfact absolutely */
@@ -1922,7 +1970,7 @@ updatebars(void)
 	XSetWindowAttributes wa = {
 		.override_redirect = True,
 		.background_pixmap = ParentRelative,
-		.event_mask = ButtonPressMask|ExposureMask
+		.event_mask = ButtonPressMask|ExposureMask|PointerMotionMask|EnterWindowMask
 	};
 	XClassHint ch = {"dwm", "dwm"};
 	for (m = mons; m; m = m->next) {
@@ -2106,7 +2154,7 @@ updatestatus(void)
 {
 	if (!gettextprop(root, XA_WM_NAME, stext, sizeof(stext)))
 		strcpy(stext, "dwm-"VERSION);
-	drawbar(selmon);
+	drawbar(selmon, 0);
 }
 
 void

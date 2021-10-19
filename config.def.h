@@ -44,12 +44,17 @@ static const char brd_fg[]			= "#eeeeee";
 static const char brd_bg[]			= "#222222";
 static const char brd_brd[]			= "#444444";
 static const char brd_flo[]			= "#444444";
+static const char foc_fg[]			= "#222222";
+static const char foc_bg[]			= "#eeeeee";
+static const char foc_brd[]			= "#444444";
+static const char foc_flo[]			= "#bbbbbb";
 
 static const char *colors[][4]		= {
 	/*					fg			bg			border		float   */
 	[SchemeBar]		= { bar_fg,		bar_bg,		bar_brd,	bar_flo	},
 	[SchemeSelect]	= { sel_fg,		sel_bg,		sel_brd,	sel_flo	},
 	[SchemeBorder]	= { brd_fg,		brd_bg,		brd_brd,	brd_flo },
+	[SchemeFocus]	= { foc_fg,		foc_bg,		foc_brd,	foc_flo },
 };
 
 
