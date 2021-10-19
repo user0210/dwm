@@ -30,6 +30,7 @@
 #include <unistd.h>
 #include <sys/types.h>
 #include <sys/wait.h>
+#include <time.h>
 #include <X11/cursorfont.h>
 #include <X11/keysym.h>
 #include <X11/Xatom.h>
@@ -85,7 +86,7 @@ enum { NetSupported, NetSystemTray, NetSystemTrayOP, NetSystemTrayOrientation, N
        NetWMName, NetWMState, NetWMFullscreen, NetActiveWindow, NetWMWindowType, NetWMWindowTypeDock,
        NetSystemTrayOrientationHorz, NetWMWindowTypeDialog, NetClientList, NetWMCheck, NetLast }; /* EWMH atoms */
 enum { WMProtocols, WMDelete, WMState, WMTakeFocus, WMLast }; /* default atoms */
-enum { ClkTagBar, ClkLtSymbol, ClkStatusText, ClkWinTitle,
+enum { ClkTagBar, ClkLtSymbol, ClkStatusText, ClkNotifyText, ClkWinTitle,
        ClkClientWin, ClkRootWin, ClkLast }; /* clicks */
 
 typedef union {
@@ -280,6 +281,7 @@ static Atom getatomprop(Client *c, Atom prop);
 static int getdwmblockspid();
 static unsigned int getsystraywidth();
 static void mirrorlayout(const Arg *arg);
+static void notifyhandler(const Arg *arg);
 static void removesystrayicon(Client *i);
 static void resizerequest(XEvent *e);
 static void rotatelayoutaxis(const Arg *arg);
@@ -301,6 +303,7 @@ static void xinitvisual();
 static const char broken[] = "broken";
 static char stext[1024];
 static char rawstext[1024];
+static char rawtext[1024];
 static int screen;
 static int sw, sh;								/* X display screen geometry width, height */
 static int bh, blw, stw, tgw, sep, gap;			/* bar geometry */
@@ -348,6 +351,7 @@ static Visual *visual;
 
 static int dwmblockssig;
 pid_t dwmblockspid = 0;
+static int istatustimer = 0;
 unsigned int xstat = 0;
 
 /* configuration, allows nested code to access above variables */
@@ -544,6 +548,10 @@ buttonstatus(int l, int xpos, int click)
 	char ch, *text = rawstext;
 	int i = -1, x = l + xstat;
 
+	if (istatustimer < 0) {
+		click = ClkNotifyText;
+ 		return click;
+	}
 	dwmblockssig = -1;
 	while (text[++i]) {
 		if ((unsigned char)text[i] < ' ') {
@@ -1103,6 +1111,9 @@ drawstatus(char* stext, Monitor *m, int xpos, int l, int r)
 	char ch, *p, *text, blocktext[1024];
 	short isCode = 0;
 
+	if (istatustimer >= 0)
+		istatustimer *= -1;
+
 	drawtheme(0,0,0,0);
 	drw_rect(drw, l, 0, selmon->ww - l - r, bh, 1, 1);
 
@@ -1136,7 +1147,9 @@ drawstatus(char* stext, Monitor *m, int xpos, int l, int r)
 				fsep = sep;
 				fblock = block;
 			}
-			if (sep == fsep && block == fblock && block)
+			if (istatustimer)
+				drawtheme(0,0,0,0);
+			else if (sep == fsep && block == fblock && block)
 				drawtheme(0,0,2,statustheme);
 			else
 				drawtheme(0,0,1,statustheme);
@@ -1153,7 +1166,7 @@ drawstatus(char* stext, Monitor *m, int xpos, int l, int r)
 					w = TEXTW(text) - lrpad;
 					if (x + w >= selmon->ww - r)
 						return;
-					drw_text(drw, x, (bartheme && statustheme) ? sep != fsep || block != fblock ? -1 : 0 : 0, w, bh, 0, text, 0);
+					drw_text(drw, x, (bartheme && statustheme && !istatustimer) ? sep != fsep || block != fblock ? -1 : 0 : 0, w, bh, 0, text, 0);
 					x += w;
 					/* process code */
 					while (text[++i] != '^') {
@@ -1180,7 +1193,9 @@ drawstatus(char* stext, Monitor *m, int xpos, int l, int r)
 							drw_clr_create(drw, &drw->scheme[ColBg], buf, alphas[(bartheme ? SchemeUnfocus : SchemeBar)][ColBg]);
 							i += 7;
 						} else if (text[i] == 'd') {
-							if (sep == fsep && block == fblock && block)
+							if (istatustimer)
+								drawtheme(0,0,0,0);
+							else if (sep == fsep && block == fblock && block)
 								drawtheme(0,0,2,statustheme);
 							else
 								drawtheme(0,0,1,statustheme);
@@ -1213,12 +1228,12 @@ drawstatus(char* stext, Monitor *m, int xpos, int l, int r)
 				w = TEXTW(text) - lrpad;
 				if (x + w >= selmon->ww - r)
 					return;
-				drw_text(drw, x, (bartheme && statustheme) ? sep != fsep || block != fblock ? -1 : 0 : 0, w, bh, 0, text, 0);
+				drw_text(drw, x, (bartheme && statustheme && !istatustimer) ? sep != fsep || block != fblock ? -1 : 0 : 0, w, bh, 0, text, 0);
 				x += w;
 			}
 			i = -1;
 
-			if (block > 0) {
+			if (block > 0 && !istatustimer) {
 				if (bartheme && statustheme) {
 					if (sep != fsep || block != fblock)
 						drawtheme(sep, block, 1, statustheme);
@@ -2979,11 +2994,30 @@ updatesizehints(Client *c)
 void
 updatestatus(void)
 {
-	if (!gettextprop(root, XA_WM_NAME, rawstext, sizeof(rawstext)))
-		strcpy(stext, "dwm-"VERSION);
-	else
-		copyvalidchars(stext, rawstext);
-	drawebar(rawstext, selmon, 0);
+	int now;
+	if (!gettextprop(root, XA_WM_NAME, rawtext, sizeof(rawtext))) {
+		istatustimer = 1;
+		strcpy(rawstext, "dwm-"VERSION);
+	} else {
+		now = time(NULL);
+		if (strncmp(istatusclose, rawtext, strlen(istatusclose)) == 0) {
+			istatustimer = 0;
+			strncpy(rawstext, stext, sizeof(stext));
+			drawebar(rawstext, selmon, 0);
+		} else if (strncmp(istatusprefix, rawtext, strlen(istatusprefix)) == 0) {
+			strncpy(stext, rawstext, sizeof(rawstext));
+			system("kill -48 $(pidof dwmblocks)");
+			istatustimer = now;
+			copyvalidchars(rawstext, rawtext + sizeof(char) * strlen(istatusprefix));
+    		memmove(rawstext + strlen(" "), rawstext, strlen(rawstext) + 1);	// add space at beginning
+    		memcpy(rawstext, " ", strlen(" "));									// add space at beginning
+			drawebar(rawstext, selmon, 0);
+		} else if (istatustimer == 0 || now - abs(istatustimer) > istatustimeout) {
+			istatustimer = 0;
+			strncpy(rawstext, rawtext, sizeof(rawtext));
+			drawebar(rawstext, selmon, 0);
+		}
+	}
 }
 
 void
@@ -3314,6 +3348,16 @@ mirrorlayout(const Arg *arg) {
 	selmon->ltaxis[0] *= -1;
 	selmon->pertag->ltaxes[selmon->pertag->curtag][0] = selmon->ltaxis[0];
 	arrange(selmon);
+}
+
+void
+notifyhandler(const Arg *arg)
+{
+	if (arg->i == 1) {
+		istatustimer = fblock = fsep = 0;
+		strncpy(rawstext, stext, sizeof(stext));
+		drawebar(rawstext, selmon, 0);
+	}
 }
 
 void

@@ -54,10 +54,13 @@ static const char *ebarorder[] = {
 /* appearance */
 static const char dmenufont[]		= "monospace:pixelsize=16";
 static const char *fonts[]			= { dmenufont };
+static const char istatusprefix[]	= "msg: ";			/* prefix for important status messages */
+static const char istatusclose[]	= "msg:close";		/* prefix to close messages */
 
 static const int bargap				= 1;		/* bar padding on/off */
 static const int borderpx			= 1;		/* border pixel of windows */
 static const int gappx				= 4;		/* gaps between windows */
+static const int istatustimeout		= 5;		/* max timeout before displaying regular status after istatus */
 static const int snap				= 32;		/* snap pixel */
 static const int showbar			= 1;		/* 0 means no bar */
 static const int showebar           = 1;        /* 0 means no extra bar */
@@ -160,6 +163,7 @@ static const Rule rules[] = {
 
 /* helper for spawning shell commands in the pre dwm-5.0 fashion */
 #define SHCMD(cmd) { .v = (const char*[]){ "/bin/sh", "-c", cmd, NULL } }
+static const char notifymenu[]	= "cat /tmp/notify | sed 's/^\\^........\\^//; s/\\^d\\^//' | dmenu -ix -l 10 | sort -r | xargs -I {} sed -i '{}d' /tmp/notify && kill -48 $(pidof dwmblocks)";
 
 
 /* commands */
@@ -173,6 +177,7 @@ static const char *termcmd[]  = { "st", NULL };
 /* keymap */
 static Key keys[] = {
 	/* modifier						key					function				argument */
+	{ MODKEY|ControlMask|ShiftMask,	XK_Return,			spawn,					SHCMD(notifymenu) },
 	{ MODKEY,						XK_Return,			spawn,					{.v = dmenucmd } },
 	{ MODKEY|ShiftMask,				XK_Return,			spawn,					{.v = termcmd } },
 	{ MODKEY,						XK_b,				togglebars,				{0} },
@@ -250,5 +255,6 @@ static Button buttons[] = {
 	{ ClkTagBar,			0,				Button3,		toggleview,			{0} },
 	{ ClkTagBar,			MODKEY,			Button1,		tag,				{0} },
 	{ ClkTagBar,			MODKEY,			Button3,		toggletag,			{0} },
+	{ ClkNotifyText,		0,				Button1,		notifyhandler,		{.i = 1 } },
 };
 
