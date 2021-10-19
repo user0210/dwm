@@ -28,8 +28,13 @@ static const int tagrows			= 2;
 static const char *tags[] = { "1", "2", "3", "4", "5", "6" };
 
 
-/* appearance */
+/* barorder and theme */
 static const int seppad 			= 5;		/* top and bottom padding of seperator (if "> bh" = dot or "< 0" dotradius) */
+static const int bartheme			= 1;		/* 0 = off, 1 = on */
+static const int statustheme		= 2;		/* 0 = classic, 1 = button-theme, 2 = float-theme */
+static const int tabbartheme		= 2;		/* 0 = classic, 1 = button-theme, 2 = float-theme */
+static const int tagtheme			= 0;		/* 0 = classic, 1 = button-theme, 2 = float-theme */
+
 static const char *barorder[]		= {
 //	"sepgap",									/*	[|]	*/
 //	"gap",										/*	[ ]	*/
@@ -40,6 +45,8 @@ static const char *barorder[]		= {
 	"status",
 ""};
 
+
+/* appearance */
 static const char dmenufont[]		= "monospace:pixelsize=16";
 static const char *fonts[]			= { dmenufont };
 
@@ -64,6 +71,10 @@ static const char foc_fg[]			= "#222222";
 static const char foc_bg[]			= "#eeeeee";
 static const char foc_brd[]			= "#444444";
 static const char foc_flo[]			= "#bbbbbb";
+static const char unf_fg[]			= "#eeeeee";
+static const char unf_bg[]			= "#444444";
+static const char unf_brd[]			= "#222222";
+static const char unf_flo[]			= "#222222";
 static const char tag_fg[]			= "#005577";
 static const char tag_bg[]			= "#eeeeee";
 static const char tag_brd[]			= "#222222";
@@ -75,6 +86,7 @@ static const char *colors[][4]		= {
 	[SchemeSelect]	= { sel_fg,		sel_bg,		sel_brd,	sel_flo	},
 	[SchemeBorder]	= { brd_fg,		brd_bg,		brd_brd,	brd_flo },
 	[SchemeFocus]	= { foc_fg,		foc_bg,		foc_brd,	foc_flo },
+	[SchemeUnfocus]	= { unf_fg,		unf_bg,		unf_brd,	unf_flo },
 	[SchemeTag]		= { tag_fg,		tag_bg,		tag_brd,	tag_flo },
 };
 
