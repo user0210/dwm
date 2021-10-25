@@ -21,9 +21,11 @@
  * To understand everything else, start reading main().
  */
 #include <errno.h>
+#include <limits.h>
 #include <locale.h>
 #include <signal.h>
 #include <stdarg.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -41,6 +43,7 @@
 #include <X11/extensions/Xinerama.h>
 #endif /* XINERAMA */
 #include <X11/Xft/Xft.h>
+#include <Imlib2.h>
 
 #include "drw.h"
 #include "util.h"
@@ -83,7 +86,7 @@ enum { Manager, Xembed, XembedInfo, XLast }; /* Xembed atoms */
 enum { CurNormal, CurResize, CurMove, CurLast }; /* cursor */
 enum { SchemeBar, SchemeSelect, SchemeBorder, SchemeFocus, SchemeUnfocus, SchemeTag }; /* color schemes */
 enum { NetSupported, NetSystemTray, NetSystemTrayOP, NetSystemTrayOrientation, NetSystemTrayVisual,
-       NetWMName, NetWMState, NetWMFullscreen, NetActiveWindow, NetWMWindowType, NetWMWindowTypeDock,
+       NetWMName, NetWMIcon, NetWMState, NetWMFullscreen, NetActiveWindow, NetWMWindowType, NetWMWindowTypeDock,
        NetSystemTrayOrientationHorz, NetWMWindowTypeDialog, NetClientList, NetWMCheck, NetLast }; /* EWMH atoms */
 enum { WMProtocols, WMDelete, WMState, WMTakeFocus, WMLast }; /* default atoms */
 enum { ClkTagBar, ClkLtSymbol, ClkStatusText, ClkNotifyText,
@@ -116,6 +119,7 @@ struct Client {
 	int bw, oldbw;
 	unsigned int tags;
 	int isfixed, isfloating, isurgent, neverfocus, oldstate, isfullscreen;
+	XImage *icon;
 	Client *next;
 	Client *snext;
 	Monitor *mon;
@@ -291,8 +295,10 @@ static void drawtabgroups(Monitor *m, int x, int r, int xpos, int passx);
 static void drawtab(Monitor *m, Client *c, int x, int w, int xpos, int tabgroup_active, int *prev);
 static void drawtaboptionals(Monitor *m, Client *c, int x, int w, int tabgroup_active);
 static void drawtaggrid(Monitor *m, int *x_pos, unsigned int occ);
+static void freeicon(Client *c);
 static Atom getatomprop(Client *c, Atom prop);
 static int getdwmblockspid();
+static XImage *geticonprop(Window win);
 static unsigned int getsystraywidth();
 static void mirrorlayout(const Arg *arg);
 static void notifyhandler(const Arg *arg);
@@ -307,6 +313,7 @@ static void switchtag(const Arg *arg);
 static Monitor *systraytomon(Monitor *m);
 static void toggleebar(const Arg *arg);
 static void togglebars(const Arg *arg);
+static void updateicon(Client *c);
 static void updatesystray(void);
 static void updatesystrayicongeom(Client *i, int w, int h);
 static void updatesystrayiconstate(Client *i, XPropertyEvent *ev);
@@ -1685,6 +1692,9 @@ manage(Window w, XWindowAttributes *wa)
 	c->oldbw = wa->border_width;
 	c->cfact = 1.0;
 
+	c->icon = NULL;
+	updateicon(c);
+
 	updatetitle(c);
 	if (XGetTransientForHint(dpy, w, &trans) && (t = wintoclient(trans))) {
 		c->mon = t->mon;
@@ -1934,6 +1944,10 @@ propertynotify(XEvent *e)
 		}
 		if (ev->atom == XA_WM_NAME || ev->atom == netatom[NetWMName]) {
 			updatetitle(c);
+			if (c == c->mon->sel)
+				drawbar(c->mon, 0);
+		} else if (ev->atom == netatom[NetWMIcon]) {
+			updateicon(c);
 			if (c == c->mon->sel)
 				drawbar(c->mon, 0);
 		}
@@ -2272,6 +2286,7 @@ setup(void)
 	netatom[NetSystemTrayOrientationHorz] = XInternAtom(dpy, "_NET_SYSTEM_TRAY_ORIENTATION_HORZ", False);
 	netatom[NetSystemTrayVisual] = XInternAtom(dpy, "_NET_SYSTEM_TRAY_VISUAL", False);
 	netatom[NetWMName] = XInternAtom(dpy, "_NET_WM_NAME", False);
+	netatom[NetWMIcon] = XInternAtom(dpy, "_NET_WM_ICON", False);
 	netatom[NetWMState] = XInternAtom(dpy, "_NET_WM_STATE", False);
 	netatom[NetWMCheck] = XInternAtom(dpy, "_NET_SUPPORTING_WM_CHECK", False);
 	netatom[NetWMFullscreen] = XInternAtom(dpy, "_NET_WM_STATE_FULLSCREEN", False);
@@ -2714,6 +2729,7 @@ unmanage(Client *c, int destroyed)
 
 	detach(c);
 	detachstack(c);
+	freeicon(c);
 	if (!destroyed) {
 		wc.border_width = c->oldbw;
 		XGrabServer(dpy); /* avoid race conditions */
@@ -3351,6 +3367,7 @@ void drawtab(Monitor *m, Client *c, int x, int w, int xpos, int tabgroup_active,
 {
 	if (!c) return;
 	int n = 0;
+	uint32_t tmp[(bh - 2 * iconpad) * (bh - 2 * iconpad)];
 
 	if (m->ww - (bargap ? 2 * m->gappx : 0) - x - w < BARTABGROUPS_FUZZPX)
 		w = m->ww - (bargap ? 2 * m->gappx : 0) - x;
@@ -3360,7 +3377,8 @@ void drawtab(Monitor *m, Client *c, int x, int w, int xpos, int tabgroup_active,
 		for(n = 0, s = nexttiled(m->clients); s; s = nexttiled(s->next), n++);
 		if (n == 1) {
 			drawtheme(0,0,0,0);
-			drw_text(drw, x, 0, w, bh, lrpad / 2, c->name, 0);
+			drw_text(drw, x, 0, w, bh, lrpad / 2 + (c->icon ? c->icon->width + iconspacing : 0), c->name, 0);
+			if (c->icon) drw_img(drw, x + lrpad / 2, (bh - c->icon->height) / 2, c->icon, tmp);
 		}
 	}
 	if (n != 1) {
@@ -3374,7 +3392,8 @@ void drawtab(Monitor *m, Client *c, int x, int w, int xpos, int tabgroup_active,
 			drawtheme(0,0,2,tabbartheme);
 		else
 			drawtheme(0,0,1,tabbartheme);
-		drw_text(drw, x, (bartheme && tabbartheme && m->sel != c) ? x != fsep || w != fblock ? -1 : 0 : 0, w, bh, lrpad / 2, c->name, 0);
+		drw_text(drw, x, (bartheme && tabbartheme && m->sel != c) ? x != fsep || w != fblock ? -1 : 0 : 0, w, bh, lrpad / 2 + (c->icon ? c->icon->width + iconspacing : 0), c->name, 0);
+		if (c->icon) drw_img(drw, x + lrpad / 2, (bh - c->icon->height) / 2 - ((bartheme && tabbartheme && m->sel != c) ? x != fsep || w != fblock ? 1 : 0 : 0), c->icon, tmp);
 		if (bartheme) {
 			if(m->sel == c)
 				drawtheme(x, w, 3, tabbartheme);
@@ -3474,6 +3493,15 @@ drawtaggrid(Monitor *m, int *x_pos, unsigned int occ)
 	*x_pos = max_x + 1;
 }
 
+void
+freeicon(Client *c)
+{
+	if (c->icon) {
+		XDestroyImage(c->icon);
+		c->icon = NULL;
+	}
+}
+
 int
 getdwmblockspid()
 {
@@ -3484,6 +3512,79 @@ getdwmblockspid()
 	pclose(fp);
 	dwmblockspid = pid;
 	return pid != 0 ? 0 : -1;
+}
+
+XImage *
+geticonprop(Window win)
+{
+	int format, iconsize;
+	unsigned long n, extra, *p = NULL;
+	Atom real;
+
+	iconsize = bh - 2 * iconpad;
+
+	if (XGetWindowProperty(dpy, win, netatom[NetWMIcon], 0L, LONG_MAX, False, AnyPropertyType,
+						   &real, &format, &n, &extra, (unsigned char **)&p) != Success)
+		return NULL;
+	if (n == 0 || format != 32) { XFree(p); return NULL; }
+
+	unsigned long *bstp = NULL;
+	uint32_t w, h, sz;
+
+	{
+		const unsigned long *end = p + n;
+		unsigned long *i;
+		uint32_t bstd = UINT32_MAX, d, m;
+		for (i = p; i < end - 1; i += sz) {
+			if ((w = *i++) > UINT16_MAX || (h = *i++) > UINT16_MAX) { XFree(p); return NULL; }
+			if ((sz = w * h) > end - i) break;
+			if ((m = w > h ? w : h) >= iconsize && (d = m - iconsize) < bstd) { bstd = d; bstp = i; }
+		}
+		if (!bstp) {
+			for (i = p; i < end - 1; i += sz) {
+				if ((w = *i++) > UINT16_MAX || (h = *i++) > UINT16_MAX) { XFree(p); return NULL; }
+				if ((sz = w * h) > end - i) break;
+				if ((d = iconsize - (w > h ? w : h)) < bstd) { bstd = d; bstp = i; }
+			}
+		}
+		if (!bstp) { XFree(p); return NULL; }
+	}
+
+	if ((w = *(bstp - 2)) == 0 || (h = *(bstp - 1)) == 0) { XFree(p); return NULL; }
+
+	uint32_t icw, ich, icsz;
+	if (w <= h) {
+		ich = iconsize; icw = w * iconsize / h;
+		if (icw == 0) icw = 1;
+	}
+	else {
+		icw = iconsize; ich = h * iconsize / w;
+		if (ich == 0) ich = 1;
+	}
+	icsz = icw * ich;
+
+	uint32_t i;
+#if ULONG_MAX > UINT32_MAX
+	uint32_t *bstp32 = (uint32_t *)bstp;
+	for (sz = w * h, i = 0; i < sz; ++i) bstp32[i] = bstp[i];
+#endif
+	uint32_t *icbuf = malloc(icsz << 2); if(!icbuf) { XFree(p); return NULL; }
+	if (w == icw && h == ich) memcpy(icbuf, bstp, icsz << 2);
+	else {
+		Imlib_Image origin = imlib_create_image_using_data(w, h, (DATA32 *)bstp);
+		if (!origin) { XFree(p); free(icbuf); return NULL; }
+		imlib_context_set_image(origin);
+		imlib_image_set_has_alpha(1);
+		Imlib_Image scaled = imlib_create_cropped_scaled_image(0, 0, w, h, icw, ich);
+		imlib_free_image_and_decache();
+		if (!scaled) { XFree(p); free(icbuf); return NULL; }
+		imlib_context_set_image(scaled);
+		imlib_image_set_has_alpha(1);
+		memcpy(icbuf, imlib_image_get_data_for_reading_only(), icsz << 2);
+		imlib_free_image_and_decache();
+	}
+	XFree(p);
+	return XCreateImage(drw->dpy, drw->visual, drw->depth, ZPixmap, 0, (char *)icbuf, icw, ich, 32, 0);
 }
 
 unsigned int
@@ -3804,6 +3905,13 @@ updatesystray(void)
 	XMapWindow(dpy, systray->win);
 	XMapSubwindows(dpy, systray->win);
 	XSync(dpy, False);
+}
+
+void
+updateicon(Client *c)
+{
+	freeicon(c);
+	c->icon = geticonprop(c->win);
 }
 
 void

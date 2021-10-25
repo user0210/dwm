@@ -1,5 +1,6 @@
 /* See LICENSE file for copyright and license details. */
 #include <stdio.h>
+#include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
 #include <X11/Xlib.h>
@@ -382,6 +383,25 @@ drw_text(Drw *drw, int x, int y, unsigned int w, unsigned int h, unsigned int lp
 		XftDrawDestroy(d);
 
 	return x + (render ? w : 0);
+}
+
+void
+drw_img(Drw *drw, int x, int y, XImage *img, uint32_t *tmp)
+{
+	if (!drw || !drw->scheme)
+		return;
+	uint32_t *data = (uint32_t *)img->data, bt = drw->scheme[ColBg].pixel;
+	int icsz = img->width * img->height, i;
+	for (i = 0; i < icsz; ++i) {
+		    uint32_t a = data[i] >> 24;
+		    uint32_t na = 255 - a;
+		    uint32_t rb = ((na * (bt & 0x00ff00ffu)) + (a * (data[i] & 0x00ff00ffu))) >> 8;
+		    uint32_t ag = (na * ((bt & 0xff00ff00u) >> 8)) + (a * (0x01000000u | ((data[i] & 0x0000ff00u) >> 8)));
+		    tmp[i] = ((rb & 0x00ff00ffu) | (ag & 0xff00ff00u));
+	}
+	img->data = (char *)tmp;
+	XPutImage(drw->dpy, drw->drawable, drw->gc, img, 0, 0, x, y, img->width, img->height);
+	img->data = (char *)data;
 }
 
 void
