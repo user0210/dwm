@@ -169,11 +169,11 @@ static const Rule rules[] = {
 	 *	switchtag			= 0 default, 1 switch to tag, 2 add application-tag, 3 as (1) and revert, 4 as (2) and revert
 	 *	border 				= -1 dont set border, 0 zero border, NUMBER thickness
 	 */
-	/* class			instance		title		tags mask	switchtag	isfloating	isterminal	noswallow	monitor 	border		*/
-	{ "Gimp",			NULL,			NULL,		0,			1,			1,			0,			0,			-1, 		-1			},
-	{ "Firefox",		NULL,			NULL,		1 << 8,		1,			0,			0,			-1,			-1, 		-1			},
-	{ "st",				NULL,			NULL,		0,			0,			0,			1,			-1,			-1, 		-1			},
-	{ NULL,				NULL,	"Event Tester",		0,			0,			1,			0,			1,			-1, 		-1			},	/* xev */
+	/* class			instance		title		tags mask	switchtag	isfloating	fakefullsc.	isterminal	noswallow	monitor 	border		*/
+	{ "Gimp",			NULL,			NULL,		0,			1,			1,			0,			0,			0,			-1, 		-1			},
+	{ "Firefox",		NULL,			NULL,		1 << 8,		1,			0,			1,			0,			-1,			-1, 		-1			},
+	{ "st",				NULL,			NULL,		0,			0,			0,			0,			1,			-1,			-1, 		-1			},
+	{ NULL,				NULL,	"Event Tester",		0,			0,			1,			0,			0,			1,			-1, 		-1			},	/* xev */
 };
 
 

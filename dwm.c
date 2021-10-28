@@ -184,6 +184,7 @@ typedef struct {
 	unsigned int tags;
 	int switchtag;
 	int isfloating;
+	int isfakefullscreen;
 	int isterminal;
 	int noswallow;
 	int monitor;
@@ -508,6 +509,7 @@ applyrules(Client *c)
 			c->isterminal = r->isterminal;
 			c->noswallow  = r->noswallow;
 			c->isfloating = r->isfloating;
+			c->fakefullscreen = r->isfakefullscreen;
 			c->tags |= r->tags;
 			c->floatborderpx = r->floatborderpx;
 			for (m = mons; m && m->num != r->monitor; m = m->next);
