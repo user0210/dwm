@@ -236,6 +236,10 @@ static Key keys[] = {
 	{ MODKEY|ControlMask,			XK_k,				setcfact,				{.f = +0.25} },
 	{ MODKEY|ControlMask,			XK_j,				setcfact,				{.f = -0.25} },
 	{ MODKEY|ControlMask,			XK_o,				setcfact,				{.f =  0.00} },
+	{ MODKEY|ShiftMask,				XK_h,				placedir,				{.i = 0 } },		/* left */
+	{ MODKEY|ShiftMask,				XK_l,				placedir,				{.i = 1 } },		/* right */
+	{ MODKEY|ShiftMask,				XK_k,				placedir,				{.i = 2 } },		/* up */
+	{ MODKEY|ShiftMask,				XK_j,				placedir,				{.i = 3 } },		/* down */
 	{ MODKEY|ControlMask,			XK_z,				zoom,					{0} },
 	{ MODKEY|ShiftMask,				XK_z,				transfer,				{0} },
 	{ MODKEY|ControlMask,			XK_Tab,				switchcol,				{0} },
