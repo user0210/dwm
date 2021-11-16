@@ -288,7 +288,7 @@ static void copyvalidchars(char *text, char *rawtext);
 static void drawebar(char *text, Monitor *m, int xpos);
 static void drawtheme(int x, int s, int status, int theme);
 static void drawtabgroups(Monitor *m, int x, int r, int xpos, int passx);
-static void drawtab(Monitor *m, Client *c, int x, int w, int xpos, int tabgroup_active);
+static void drawtab(Monitor *m, Client *c, int x, int w, int xpos, int tabgroup_active, int *prev);
 static void drawtaboptionals(Monitor *m, Client *c, int x, int w, int tabgroup_active);
 static void drawtaggrid(Monitor *m, int *x_pos, unsigned int occ);
 static Atom getatomprop(Client *c, Atom prop);
@@ -3274,6 +3274,7 @@ drawtabgroups(Monitor *m, int x, int r, int xpos, int passx)
 	Client *c;
 	TabGroup *tg_head = NULL, *tg, *tg2;
 	int tabwidth, tabx, tabgroupwidth, bw;
+	int  prev = 1;
 
 	bw = borderpx;
 
@@ -3325,7 +3326,7 @@ drawtabgroups(Monitor *m, int x, int r, int xpos, int passx)
 		tabgroupwidth = (MIN(tg->end, m->ww - r) - MAX(x, tg->start));
 		tabx = MAX(x, tg->start) + (tabgroupwidth / tg->n * tg->i);
 		tabwidth = tabgroupwidth / tg->n + (tg->n == tg->i + 1 ?  tabgroupwidth % tg->n : 0);
-		drawtab(m, c, tabx, tabwidth, xpos, tg->active);
+		drawtab(m, c, tabx, tabwidth, xpos, tg->active, &prev);
 		drawtaboptionals(m, c, tabx, tabwidth, tg->active);
 		if (m ->lt[m->sellt]->arrange == tile && abs(m->ltaxis[0]) != 2) {
 			if (passx > 0 && passx > tabx && passx < tabx + tabwidth) {
@@ -3346,7 +3347,7 @@ drawtabgroups(Monitor *m, int x, int r, int xpos, int passx)
 	while (tg_head != NULL) { tg = tg_head; tg_head = tg_head->next; free(tg); }
 }
 
-void drawtab(Monitor *m, Client *c, int x, int w, int xpos, int tabgroup_active)
+void drawtab(Monitor *m, Client *c, int x, int w, int xpos, int tabgroup_active, int *prev)
 {
 	if (!c) return;
 	int n = 0;
@@ -3384,6 +3385,14 @@ void drawtab(Monitor *m, Client *c, int x, int w, int xpos, int tabgroup_active)
 		} else {
 			XSetForeground(drw->dpy, drw->gc, scheme[SchemeBar][ColBg].pixel);
 			XFillRectangle(drw->dpy, drw->drawable, drw->gc, x - (m->sel == c ? 1 : 0), 0, 1, bh);
+		}
+		if (tabbarsep && (!tabbartheme || !bartheme)) {
+			if (((m->sel == c) || (x == fsep && w == fblock && w)) && (tabbarsep == 2))
+				*prev = 1;
+			else if (*prev == 0)
+				drawsep(m, x + 2, 0, 0, 0);
+			else if ((*prev != 0))
+				*prev = 0;
 		}
 	}
 }
