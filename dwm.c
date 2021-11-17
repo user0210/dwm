@@ -4027,6 +4027,11 @@ void drawtab(Monitor *m, Client *c, int x, int w, int xpos, int tabgroup_active,
 	int n = 0;
 	uint32_t tmp[(bh - 2 * iconpad) * (bh - 2 * iconpad)];
 
+	int imgw = c->icon ? c->icon->width + iconspacing : 0;
+	int texty, textx = titlecenter ? w/2 - (TEXTW(c->name) - lrpad - (titlecenter > 1 ? imgw : 0)) / 2 : lrpad / 2;
+	if (textx < imgw + lrpad / 2)
+		textx = imgw + lrpad / 2;
+
 	if (m->ww - (bargap ? 2 * m->gappx : 0) - x - w < BARTABGROUPS_FUZZPX)
 		w = m->ww - (bargap ? 2 * m->gappx : 0) - x;
 
@@ -4035,8 +4040,8 @@ void drawtab(Monitor *m, Client *c, int x, int w, int xpos, int tabgroup_active,
 		for(n = 0, s = nexttiled(m->clients); s; s = nexttiled(s->next), n++);
 		if (n == 1) {
 			drawtheme(0,0,0,0,0);
-			drw_text(drw, x, y, w, bh, lrpad / 2 + (c->icon ? c->icon->width + iconspacing : 0), c->name, 0);
-			if (c->icon) drw_img(drw, x + lrpad / 2, y + (bh - c->icon->height) / 2, c->icon, tmp);
+			drw_text(drw, x, y, w, bh, textx, c->name, 0);
+			if (c->icon) drw_img(drw, x + (titlecenter > 1 ? textx - imgw : lrpad / 2), y + (bh - c->icon->height) / 2, c->icon, tmp);
 		}
 	}
 	if (n != 1) {
@@ -4050,8 +4055,9 @@ void drawtab(Monitor *m, Client *c, int x, int w, int xpos, int tabgroup_active,
 			drawtheme(0,0,2,tabbartheme,0);
 		else
 			drawtheme(0,0,1,tabbartheme,0);
-		drw_text(drw, x, y + ((bartheme && tabbartheme && m->sel != c) ? x != fsep || w != fblock ? -1 : 0 : 0), w, bh, lrpad / 2 + (c->icon ? c->icon->width + iconspacing : 0), c->name, 0);
-		if (c->icon) drw_img(drw, x + lrpad / 2, y + (bh - c->icon->height) / 2 - ((bartheme && tabbartheme && m->sel != c) ? x != fsep || w != fblock ? 1 : 0 : 0), c->icon, tmp);
+		texty = y + ((bartheme && tabbartheme && m->sel != c) ? x != fsep || w != fblock ? -1 : 0 : 0);
+		drw_text(drw, x, texty, w, bh, textx, c->name, 0);
+		if (c->icon) drw_img(drw, x + (titlecenter > 1 ? textx - imgw : lrpad / 2), texty + (bh - c->icon->height) / 2, c->icon, tmp);
 		if (bartheme) {
 			if(m->sel == c)
 				drawtheme(x, w, 3, tabbartheme, y);

@@ -86,6 +86,7 @@ static const int snap				= 32;		/* snap pixel */
 static const int showbar			= 1;		/* 0 means no bar */
 static const int showebar           = 1;        /* 0 means no extra bar */
 static const int statuscenter		= 0;		/* center status elements */
+static const int titlecenter		= 2;		/* 1 - center title, 2 center title with icon */
 static const int swallowfloating	= 1;		/* 1 means swallow floating windows by default */
 static const int systraypinning 	= 0;		/* 0: sloppy systray follows selected monitor, >0: pin systray to monitor X */
 static const int systrayspacing 	= 2;		/* systray spacing */
