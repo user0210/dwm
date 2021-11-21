@@ -71,6 +71,8 @@ static const int attachdirection	= 2;		/* 0 default, 1 above, 2 aside, 3 below, 
 static const int bargap				= 1;		/* bar padding on/off */
 static const int borderpx			= 1;		/* border pixel of windows */
 static const int tagborderpx		= borderpx;	/* border pixel of tagpreview */
+static const int floatposgrid_x		= 5;		/* float grid columns */
+static const int floatposgrid_y		= 5;		/* float grid rows */
 static const int gappx				= 4;		/* gaps between windows */
 static const int iconpad			= 1;		/* icon padding to barborders */
 static const int iconspacing		= 5;		/* space between icon and title */
@@ -168,12 +170,42 @@ static const Rule rules[] = {
 	 *	WM_NAME(STRING)		= title
 	 *	switchtag			= 0 default, 1 switch to tag, 2 add application-tag, 3 as (1) and revert, 4 as (2) and revert
 	 *	border 				= -1 dont set border, 0 zero border, NUMBER thickness
+	 *
+	 *  floatpos values - Coordinates char meaning
+	 *  A - absolute position in the drawable area (this spans all monitors)
+	 *  a - absolute position relative to the client's current position
+	 *  X - position relative to monitor
+	 *  x - position relative to client
+	 *  Y - position relative to monitor
+	 *  y - position relative to client
+	 *  m - position relative to mouse cursor
+	 *  M - as above
+	 *  % - specifies the client's mid-point in percentage relative to the window area height / width
+	 *  S - the client's current x / y position is fixed (sticky)
+	 *  	if value is -1 then width / height indicators determines the size of the client
+	 *  	otherwise the value indicates the next position, determining the size of the client
+	 *  	this can, as an example, be used to "maximize" a client from it's current position to the edge of the screen
+	 *  C - as above, but the client's mid-point (center) is fixed (sticky)
+	 *  	this is typically used when resizing clients, making them expand or contract in all directions
+	 *  Z - as above, but the opposite side of the client is fixed (sticky) (i.e. client position + size)
+	 *  G - indicates that the monitor is split into a grid on which points the client can be positioned
+	 *  	the value defines the size of the grid, if value is 0 then grid dimensions from config is used
+	 *  floatpos values - Dimensions char meaning
+	 *  A - absolute height / width
+	 *  a - relative height / width
+	 *  H - defines height of client, but position can take precedence
+	 *  h - defines height relative to client size
+	 *  W - defines width of client, but position can take precedence
+	 *  w - defines width relative to client size
+	 *  % - size determined in percentage of the monitor's window area
+	 *  P - absolute grid position
+	 *  p - relative grid position
 	 */
-	/* class			instance		title		tags mask	switchtag	isfloating	fakefullsc.	isterminal	noswallow	monitor 	border		*/
-	{ "Gimp",			NULL,			NULL,		0,			1,			1,			0,			0,			0,			-1, 		-1			},
-	{ "Firefox",		NULL,			NULL,		1 << 8,		1,			0,			1,			0,			-1,			-1, 		-1			},
-	{ "st",				NULL,			NULL,		0,			0,			0,			0,			1,			-1,			-1, 		-1			},
-	{ NULL,				NULL,	"Event Tester",		0,			0,			1,			0,			0,			1,			-1, 		-1			},	/* xev */
+	/* class			instance		title		tags mask	switchtag	isfloating	fakefullsc.	isterminal	noswallow	monitor 	border		floatpos			*/
+	{ "Gimp",			NULL,			NULL,		0,			1,			1,			0,			0,			0,			-1, 		-1,			NULL				},
+	{ "Firefox",		NULL,			NULL,		1 << 8,		1,			0,			1,			0,			-1,			-1, 		-1,			NULL				},
+	{ "st",				NULL,			NULL,		0,			0,			0,			0,			1,			-1,			-1, 		-1,			NULL				},
+	{ NULL,				NULL,	"Event Tester",		0,			0,			1,			0,			0,			1,			-1, 		-1,			NULL				},	/* xev */
 };
 
 
@@ -276,6 +308,28 @@ static Key keys[] = {
     { MODKEY|ControlMask|ALT,		XK_j,				switchtag,				{ .ui = SWITCHTAG_DOWN   | SWITCHTAG_TAG | SWITCHTAG_VIEW } },
     { MODKEY|ControlMask|ALT,		XK_l,				switchtag,				{ .ui = SWITCHTAG_RIGHT  | SWITCHTAG_TAG | SWITCHTAG_VIEW } },
     { MODKEY|ControlMask|ALT,		XK_h,				switchtag,				{ .ui = SWITCHTAG_LEFT   | SWITCHTAG_TAG | SWITCHTAG_VIEW } },
+
+	/* a|a) absolute position, x|y) no bar overlap and only this monitor		        a/x  a/y					*/
+	{ MODKEY,						XK_Up,				floatpos,				{.v = "  0a -26a" } },			// ↑
+	{ MODKEY,						XK_Left,			floatpos,				{.v = "-26a   0a" } },			// ←
+	{ MODKEY,						XK_Right,			floatpos,				{.v = " 26a   0a" } },			// →
+	{ MODKEY,						XK_Down,			floatpos,				{.v = "  0a  26a" } },			// ↓
+	/* w|h) Resize client, W|H) absolute size											w|W  h|H					*/
+	{ MODKEY|ShiftMask,				XK_Up,				floatpos,				{.v = "  0w -26h" } },			// ↑
+	{ MODKEY|ShiftMask,				XK_Left,			floatpos,				{.v = "-26w   0h" } },			// ←
+	{ MODKEY|ShiftMask,				XK_Right,			floatpos,				{.v = " 26w   0h" } },			// →
+	{ MODKEY|ShiftMask,				XK_Down,			floatpos,				{.v = "  0w  26h" } },			// ↓
+	/* maximize in direction																						*/
+	{ MODKEY|ControlMask|ShiftMask,	XK_Up,				floatpos,				{.v = " 0x  0Z   0%   0%" } },	// ↑
+	{ MODKEY|ControlMask|ShiftMask,	XK_Left,			floatpos,				{.v = " 0Z  0y   0%   0%" } },	// ←
+	{ MODKEY|ControlMask|ShiftMask,	XK_Right,			floatpos,				{.v = "-1S  0y 100%   0%" } },	// →
+	{ MODKEY|ControlMask|ShiftMask,	XK_Down,			floatpos,				{.v = " 0x -1S   0% 100%" } },	// ↓
+//	/* move one position up in grid... 																				*/
+//	{ ???,							???,				floatpos,				{.v = " 0p -1p" } },			// ↑
+//	/* corner and center positioning... (center)																	*/
+//	{ ???,							???,				floatpos,				{.v = " 50% 50%" } },			// ↑
+//	/* use 3x3 grid und take third position...																		*/
+//	{ ???,							???,				floatpos,				{.v = "3G 3G 3P 1P" } },		// ↗
 
 	TAGKEYS(						XK_1,										0)
 	TAGKEYS(						XK_2,										1)
