@@ -361,6 +361,7 @@ static void setgaps(const Arg *arg);
 static void setcfact(const Arg *arg);
 static void setfloatpos(Client *c, const char *floatpos);
 static void setscratch(const Arg *arg);
+static void shiftviewclients(const Arg *arg);
 static void showtagpreview(int tag, int xpos);
 static void sigdwmblocks(const Arg *arg);
 static pid_t spawncmd(const Arg *arg);
@@ -5251,6 +5252,29 @@ setscratch(const Arg *arg)
 	if (!c)
 		return;
 	c->scratchkey = ((char**)arg->v)[0][0];
+}
+
+void
+shiftviewclients(const Arg *arg)
+{
+	Arg shifted;
+	Client *c;
+	unsigned int tagmask = 0;
+
+	for (c = selmon->clients; c; c = c->next)
+		tagmask = tagmask | c->tags;
+	shifted.ui = selmon->tagset[selmon->seltags];
+	if (arg->i > 0) // left circular shift
+		do {
+			shifted.ui = (shifted.ui << arg->i)
+			   | (shifted.ui >> (LENGTH(tags) - arg->i));
+		} while (tagmask && !(shifted.ui & tagmask));
+	else // right circular shift
+		do {
+			shifted.ui = (shifted.ui >> (- arg->i)
+			   | shifted.ui << (LENGTH(tags) + arg->i));
+		} while (tagmask && !(shifted.ui & tagmask));
+	view(&shifted);
 }
 
 void

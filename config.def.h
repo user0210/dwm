@@ -306,6 +306,8 @@ static Key keys[] = {
 	{ MODKEY|ControlMask|ShiftMask,	XK_q,				quit,					{0} },
 	{ MODKEY|ShiftMask,				XK_r,				xrdb,					{.v = NULL } },
 
+	{ MODKEY|ALT,					XK_n,				shiftviewclients,		{ .i = +1 } },
+	{ MODKEY|ALT,					XK_p,				shiftviewclients,		{ .i = -1 } },
     { MODKEY|ALT,					XK_k,				switchtag,				{ .ui = SWITCHTAG_UP     | SWITCHTAG_VIEW } },
     { MODKEY|ALT,					XK_j,				switchtag,				{ .ui = SWITCHTAG_DOWN   | SWITCHTAG_VIEW } },
     { MODKEY|ALT,					XK_l,				switchtag,				{ .ui = SWITCHTAG_RIGHT  | SWITCHTAG_VIEW } },
