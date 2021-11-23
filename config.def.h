@@ -201,12 +201,13 @@ static const Rule rules[] = {
 	 *  P - absolute grid position
 	 *  p - relative grid position
 	 */
-	/* class			instance		title		tags mask	switchtag	isfloating	fakefullsc.	isterminal	noswallow	monitor 	border		floatpos			*/
-	{ "Gimp",			NULL,			NULL,		0,			1,			1,			0,			0,			0,			-1, 		-1,			NULL				},
-	{ "Firefox",		NULL,			NULL,		1 << 8,		1,			0,			1,			0,			-1,			-1, 		-1,			NULL				},
-	{ "st",				NULL,			NULL,		0,			0,			0,			0,			1,			-1,			-1, 		-1,			NULL				},
-	{ NULL,				NULL,	"Event Tester",		0,			0,			1,			0,			0,			1,			-1, 		-1,			NULL				},	/* xev */
-	{ NULL,				NULL,			NULL,		0,			0,			0,			0,			0,			0,			-1,			-1,			"50% 50% 0w% 0w%"	},	/* default (last!)*/
+	/* class			instance		title		tags mask	switchtag	isfloating	fakefullsc.	isterminal	noswallow	monitor 	border		scratch		floatpos			*/
+	{ "Gimp",			NULL,			NULL,		0,			1,			1,			0,			0,			0,			-1, 		-1,			0,			NULL				},
+	{ "Firefox",		NULL,			NULL,		1 << 8,		1,			0,			1,			0,			-1,			-1, 		-1,			0,			NULL				},
+	{ NULL,				NULL,	"scratchpad",		0,			0,			1,			0,			1,			0,			-1,			 4,			's',		"50% 50% 50% 50%"	},	/* before st ! */
+	{ "st",				NULL,			NULL,		0,			0,			0,			0,			1,			-1,			-1, 		-1,			0,			NULL				},
+	{ NULL,				NULL,	"Event Tester",		0,			0,			1,			0,			0,			1,			-1, 		-1,			0,			NULL				},	/* xev */
+	{ NULL,				NULL,			NULL,		0,			0,			0,			0,			0,			0,			-1,			-1,			0,			"50% 50% 0w% 0w%"	},	/* default (last!)*/
 };
 
 
@@ -230,7 +231,8 @@ static char dmenumon[2] = "0"; /* component of dmenucmd, manipulated in spawn() 
 static char dmenugap[16] = "0";
 static char dmenulen[16] = "0";
 static const char *dmenucmd[] = { "dmenu_run", "-m", dmenumon, "-fn", dmenufont, "-x", dmenugap, "-y", dmenugap, "-z", dmenulen, "-nb", bar_bg, "-nf", bar_fg, "-sb", foc_bg, "-sf", foc_fg, NULL };
-static const char *termcmd[]  = { "st", NULL };
+static const char *termcmd[]  = { "st", "-u", "-e", "bash", "--rcfile", "~/.config/tmux/shell/stmux/.bashrc", NULL };
+static const char *scratchpadcmd[] = { "s", "st", "-t", "scratchpad", "-u", "-e", "bash", "--rcfile", "~/.config/tmux/shell/scratchpad/.bashrc", NULL };
 
 
 /* xsetroot fake commands */
@@ -247,6 +249,9 @@ static Key keys[] = {
 	{ MODKEY|ControlMask|ShiftMask,	XK_Return,			spawn,					SHCMD(notifymenu) },
 	{ MODKEY,						XK_Return,			spawn,					{.v = dmenucmd } },
 	{ MODKEY|ShiftMask,				XK_Return,			spawn,					{.v = termcmd } },
+	{ MODKEY|ControlMask,			XK_Return,			togglescratch,			{.v = scratchpadcmd } },
+	{ MODKEY|ALT,					XK_minus,			removescratch,			{.v = scratchpadcmd } },
+	{ MODKEY|ALT,					XK_plus,			setscratch,				{.v = scratchpadcmd } },
 	{ MODKEY|ControlMask,			XK_s,				riospawn,				{.v = termcmd } },
 	{ MODKEY,						XK_s,				rioresize,				{0} },
 	{ MODKEY,						XK_b,				togglebars,				{0} },
