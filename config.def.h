@@ -201,13 +201,13 @@ static const Rule rules[] = {
 	 *  P - absolute grid position
 	 *  p - relative grid position
 	 */
-	/* class			instance		title		tags mask	switchtag	isfloating	fakefullsc.	isterminal	noswallow	monitor 	border		scratch		floatpos			*/
-	{ "Gimp",			NULL,			NULL,		0,			1,			1,			0,			0,			0,			-1, 		-1,			0,			NULL				},
-	{ "Firefox",		NULL,			NULL,		1 << 8,		1,			0,			1,			0,			-1,			-1, 		-1,			0,			NULL				},
-	{ NULL,				NULL,	"scratchpad",		0,			0,			1,			0,			1,			0,			-1,			 4,			's',		"50% 50% 50% 50%"	},	/* before st ! */
-	{ "st",				NULL,			NULL,		0,			0,			0,			0,			1,			-1,			-1, 		-1,			0,			NULL				},
-	{ NULL,				NULL,	"Event Tester",		0,			0,			1,			0,			0,			1,			-1, 		-1,			0,			NULL				},	/* xev */
-	{ NULL,				NULL,			NULL,		0,			0,			0,			0,			0,			0,			-1,			-1,			0,			"50% 50% 0w% 0w%"	},	/* default (last!)*/
+	/* class			instance		title		tags mask	switchtag	isfloating	fakefullsc.	isterminal	noswallow	monitor 	ignoresize	border		scratch		floatpos			*/
+	{ "Gimp",			NULL,			NULL,		0,			1,			1,			0,			0,			0,			-1, 		0,			-1,			0,			NULL				},
+	{ "Firefox",		NULL,			NULL,		1 << 8,		1,			0,			1,			0,			-1,			-1, 		0,			-1,			0,			NULL				},
+	{ NULL,				NULL,	"scratchpad",		0,			0,			1,			0,			1,			0,			-1,			0,			 4,			's',		"50% 50% 50% 50%"	},	/* before st ! */
+	{ "st",				NULL,			NULL,		0,			0,			0,			0,			1,			-1,			-1, 		1,			-1,			0,			NULL				},
+	{ NULL,				NULL,	"Event Tester",		0,			0,			1,			0,			0,			1,			-1, 		0,			-1,			0,			NULL				},	/* xev */
+	{ NULL,				NULL,			NULL,		0,			0,			0,			0,			0,			0,			-1,			0,			-1,			0,			"50% 50% 0w% 0w%"	},	/* default (last!)*/
 };
 
 

@@ -193,6 +193,7 @@ typedef struct {
 	int isterminal;
 	int noswallow;
 	int monitor;
+	int ignoresizehints;
 	int floatborderpx;
 	const char scratchkey;
 	const char *floatpos;
@@ -538,6 +539,7 @@ applyrules(Client *c)
 			c->tags |= r->tags;
 			c->scratchkey = r->scratchkey;
 			c->floatborderpx = r->floatborderpx;
+			c->ignoresizehints = r->ignoresizehints;
 			for (m = mons; m && m->num != r->monitor; m = m->next);
 			if (m)
 				c->mon = m;
