@@ -205,8 +205,18 @@ static const Rule rules[] = {
 	{ "Gimp",			NULL,			NULL,		0,			1,			1,			0,			0,			0,			-1, 		0,			-1,			0,			NULL				},
 	{ "Firefox",		NULL,			NULL,		1 << 8,		1,			0,			1,			0,			-1,			-1, 		0,			-1,			0,			NULL				},
 	{ NULL,				NULL,	"scratchpad",		0,			0,			1,			0,			1,			0,			-1,			0,			 4,			's',		"50% 50% 50% 50%"	},	/* before st ! */
-	{ "st",				NULL,			NULL,		0,			0,			0,			0,			1,			-1,			-1, 		1,			-1,			0,			NULL				},
+	{ "St",				NULL,			NULL,		0,			0,			0,			0,			1,			-1,			-1, 		1,			-1,			0,			NULL				},
 	{ NULL,				NULL,	"Event Tester",		0,			0,			1,			0,			0,			1,			-1, 		0,			-1,			0,			NULL				},	/* xev */
+	{ "qutebrowser",	NULL,			NULL,		0,			0,			0,			1,			0,			0,			-1,			0,			-1,			0,			NULL				},
+	{ "Onboard",		NULL,			NULL,		0,			0,			1,			0,			0,			0,			-1,			0,			 0,			0,			NULL				},
+	{ NULL,				"wallman",		NULL,		0,			0,			1,			0,			0,			0,			-1,			0,			 0,			0,			"0% 0a 100% 110H"	},
+	/* dwmblocks modules */
+	{ "dbar",			"alsam",		NULL,		0,			0,			1,			0,			0,			0,			-1,			0,			 4,			0,			"0m 0y 400W 500H"	},
+	{ "dbar",			"pulsm",		NULL,		0,			0,			1,			0,			0,			0,			-1,			0,			 4,			0,			"0m 0y 600W 600H"	},
+	{ "dbar",			"psmem",		NULL,		0,			0,			1,			0,			0,			0,			-1,			0,			 4,			0,			"0m 0y 610W 650H"	},
+	{ "dbar",			"calen",		NULL,		0,			0,			1,			0,			0,			0,			-1,			0,			 4,			0,			"0m 0y 170W 160H"	},
+	{ "dbar",			"calcurse",		NULL,		0,			0,			1,			0,			0,			0,			-1,			0,			 4,			0,			"0m 0y 600W 600H"	},
+	{ "dbar",			"htop",			NULL,		0,			0,			1,			0,			0,			0,			-1,			0,			 4,			0,			"0m 0y 1010W 650H"	},
 	{ NULL,				NULL,			NULL,		0,			0,			0,			0,			0,			0,			-1,			0,			-1,			0,			"50% 50% 0w% 0w%"	},	/* default (last!)*/
 };
 
@@ -230,9 +240,12 @@ static const char notifymenu[]	= "cat /tmp/notify | sed 's/^\\^........\\^//; s/
 static char dmenumon[2] = "0"; /* component of dmenucmd, manipulated in spawn() */
 static char dmenugap[16] = "0";
 static char dmenulen[16] = "0";
-static const char *dmenucmd[] = { "dmenu_run", "-m", dmenumon, "-fn", dmenufont, "-x", dmenugap, "-y", dmenugap, "-z", dmenulen, "-nb", bar_bg, "-nf", bar_fg, "-sb", foc_bg, "-sf", foc_fg, NULL };
+static const char *dmenucmd[] = { "dmenu_run", "-m", dmenumon, "-fn", dmenufont, "-x", dmenugap, "-y", dmenugap, "-z", dmenulen, NULL };
 static const char *termcmd[]  = { "st", "-u", "-e", "bash", "--rcfile", "~/.config/tmux/shell/stmux/.bashrc", NULL };
 static const char *scratchpadcmd[] = { "s", "st", "-t", "scratchpad", "-u", "-e", "bash", "--rcfile", "~/.config/tmux/shell/scratchpad/.bashrc", NULL };
+static const char *browser[] = { "qutebrowser", NULL };
+static const char *alsam[] = { "st", "-c", "dbar", "-n", "alsam", "-e", "alsamixer", NULL };
+static const char *pulsm[] = { "pavucontrol", "--class", "dbar", "--name", "pulsm", NULL };
 
 
 /* xsetroot fake commands */
@@ -240,15 +253,34 @@ static const Command commands[]		= {
 	/* command		function		argument */
 	{ "xrdb",		xrdb,			{.v = NULL }	},
 	{ "kill",		killclient,		{0}  			},
+	{ "alsam",		spawn,			{.v = alsam }	},
+	{ "pulsm",		spawn,			{.v = pulsm }	},
 };
 
 
 /* keymap */
+#include <X11/XF86keysym.h>
+
 static const float mset				= 0.05;		/* resize m-fact */
 static const float cset				= 0.25;		/* resize c-fact */
 static char pospx[16]				= "25";		/* change in pixel for floatpos */
 static Key keys[] = {
 	/* modifier						key					function				argument */
+    { 0,	XF86XK_AudioLowerVolume,					spawn,					SHCMD("/usr/bin/amixer -q sset Master 5%-; kill -35 $(pidof dwmblocks)") },
+	{ 0,	XF86XK_AudioRaiseVolume,					spawn,					SHCMD("/usr/bin/amixer -q sset Master 5%+; kill -35 $(pidof dwmblocks)") },
+//	{ 0,	XF86XK_AudioMute,							spawn,					SHCMD("/usr/bin/amixer set Master toggle; kill -35 $(pidof dwmblocks)") },
+	{ 0,	XF86XK_AudioMute,							spawn,					SHCMD("kill -35 $(pidof dwmblocks)") },
+//	{ 0,	XF86XK_AudioMicMute,						spawn,					SHCMD("/usr/bin/amixer set Capture toggle") },
+    { 0,	XF86XK_AudioPlay,							spawn,					SHCMD("playerctl play-pause") },
+    { 0,	XF86XK_AudioNext,							spawn,					SHCMD("playerctl next") },
+    { 0,	XF86XK_AudioPrev,							spawn,					SHCMD("playerctl previous") },
+    { 0,	XF86XK_MonBrightnessUp,						spawn,					SHCMD("sleep 0.1; kill -36 $(pidof dwmblocks)") },
+    { 0,	XF86XK_MonBrightnessDown,					spawn,					SHCMD("sleep 0.1; kill -36 $(pidof dwmblocks)") },
+    { 0,	XF86XK_Launch5,								spawn,					SHCMD("thinkpad-rotate flip") },
+    { 0,	XF86XK_Launch6,								spawn,					SHCMD("thinkpad-rotate left") },
+	{ 0,	XF86XK_Launch1,								spawn,					{.v = dmenucmd } },
+
+	{ MODKEY|ControlMask,			XK_w,				spawn,					{.v = browser } },
 	{ MODKEY|ControlMask|ShiftMask,	XK_Return,			spawn,					SHCMD(notifymenu) },
 	{ MODKEY,						XK_Return,			spawn,					{.v = dmenucmd } },
 	{ MODKEY|ShiftMask,				XK_Return,			spawn,					{.v = termcmd } },
@@ -375,6 +407,6 @@ static Button buttons[] = {
 	{ ClkTagBar,			MODKEY,			Button3,		toggletag,			{0} },
 	{ ClkNotifyText,		0,				Button1,		notifyhandler,		{.i = 1 } },
 	{ ClkRootWin,			0,				Button1,		dragfact,			{0} },
-
+	{ ClkRootWin,			0,				Button3,		spawn,				SHCMD("xmenu.sh") },
 };
 
