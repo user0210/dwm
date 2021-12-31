@@ -38,7 +38,7 @@ static const char *tags[] = { "1", "2", "3", "4", "5", "6" };
 static const int seppad 			= 5;		/* top and bottom padding of seperator (if "> bh" = dot or "< 0" dotradius) */
 static const int statussep			= 1;		/* 0 = off, 1 = on, 2 = hide on focus */
 static const int tabbarsep			= 2;		/* 0 = off, 1 = on, 2 = hide on focus */
-static const int bartheme			= 1;		/* 0 = off, 1 = on */
+static const int themebar			= 1;		/* 0 = off, 1 = on */
 static const int statustheme		= 2;		/* 0 = classic, 1 = button-theme, 2 = float-theme */
 static const int tabbartheme		= 2;		/* 0 = classic, 1 = button-theme, 2 = float-theme */
 static const int tagtheme			= 0;		/* 0 = classic, 1 = button-theme, 2 = float-theme */
@@ -69,6 +69,7 @@ static const char slopresizestyle[]	= "-t 0 -l -c 0.92,0.85,0.69,0.3 -o";	/* do 
 
 static const int attachdirection	= 2;		/* 0 default, 1 above, 2 aside, 3 below, 4 bottom, 5 top */
 static const int bargap				= 1;		/* bar padding on/off */
+static const int barborder			= 1;		/* 0: off (disable in picom!) 1: barborder 2: border and tileswitch theme-change; -1,-2: focus-indicator */
 static const int borderpx			= 1;		/* border pixel of windows */
 static const int tagborderpx		= borderpx;	/* border pixel of tagpreview */
 static const int floatposgrid_x		= 5;		/* float grid columns */

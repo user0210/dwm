@@ -459,6 +459,8 @@ pid_t dwmblockspid = 0;
 static int istatustimer = 0;
 unsigned int xstat = 0;
 
+static int bartheme;
+
 /* configuration, allows nested code to access above variables */
 #include "config.h"
 
@@ -1186,6 +1188,24 @@ dirtomon(int dir)
 
 /* drawbar-functions */
 
+void drawbarborder(Monitor *m) {
+	if (fbar && m->gappx > tileswitch  && barborder < 0)
+		XSetForeground(drw->dpy, drw->gc, scheme[SchemeBorder][ColFg].pixel);
+	else if (barborder)
+		XSetForeground(drw->dpy, drw->gc, scheme[SchemeBar][ColBorder].pixel);
+	else
+		XSetForeground(drw->dpy, drw->gc, scheme[SchemeBar][bartheme ? ColBg : ColFloat].pixel);
+
+	if ((barborder && bargap && m->gappx != 0) || m->gappx == 0)
+		XFillRectangle(drw->dpy, drw->drawable, drw->gc, 0, 2 * bh - 1, m->ww - (bargap ? 2 * m->gappx : 0), 1);
+	if (barborder && bargap && m->gappx != 0) {
+		XFillRectangle(drw->dpy, drw->drawable, drw->gc, 0, 0, 1, 2 * bh);
+		XFillRectangle(drw->dpy, drw->drawable, drw->gc, 0, 0, m->ww - (bargap ? 2 * m->gappx : 0), 1);
+		XFillRectangle(drw->dpy, drw->drawable, drw->gc, m->ww - 1 - (bargap ? 2 * m->gappx : 0), 0, 1, 2 * bh);
+	}
+	drw_map(drw, m->barwin, 0, 0, m->ww - (bargap ? 2 * m->gappx : 0), 2 * bh);
+}
+
 int drawsep(Monitor *m, int lr, int p, int xpos, int s, int y) {
 	int len, sp, dot = 0;
 
@@ -1522,6 +1542,7 @@ drawbar(Monitor *m, int xpos)
 	}
 	drawtabgroups(m, l, r, xpos, 0, y);
 	drw_map(drw, m->barwin, 0, y, m->ww - (bargap ? 2 * m->gappx : 0), bh);
+	drawbarborder(m);
 }
 
 void
@@ -1557,6 +1578,7 @@ drawebar(char* stext, Monitor *m, int xpos)
 	}
 	drawstatus(stext, m, xpos, l, r);
 	drw_map(drw, m->barwin, 0, 0, m->ww - (bargap ? 2 * m->gappx : 0), bh);
+	drawbarborder(m);
 }
 
 void
@@ -2646,6 +2668,7 @@ setup(void)
 		updatesystray();
 	}
 	/* init bars */
+	bartheme = abs(barborder) > 1 ? gappx <= tileswitch ? 1 : 0 : themebar;
 	updatebars();
 	updatestatus();
 	updatepreview();
@@ -5207,10 +5230,14 @@ setgaps(const Arg *arg)
 	if (tileswitch >= 0 && abs(selmon->gappx + arg->i - tileswitch) <= abs(arg->i)) {
 		Client *c;
 		if ((selmon->gappx + arg->i <= tileswitch && arg->i < 0)) {
+			if (abs(barborder) > 1)
+				bartheme = 1;
 			for (c = nexttiled(selmon->clients); c; c = nexttiled(c->next))
 				XSetWindowBorder(dpy, c->win, scheme[SchemeBorder][ColBorder].pixel);
 			focus(c);
 		} else if ((selmon->gappx + arg->i > tileswitch && arg->i > 0)) {
+			if (abs(barborder) > 1)
+				bartheme = 0;
 			for (c = nexttiled(selmon->clients); c; c = nexttiled(c->next))
 				XSetWindowBorder(dpy, c->win, scheme[SchemeBorder][ColBg].pixel);
 			focus(c);
