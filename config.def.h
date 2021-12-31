@@ -64,6 +64,7 @@ static const char *fonts[]			= { dmenufont };
 static const char istatusprefix[]	= "msg: ";			/* prefix for important status messages */
 static const char istatusclose[]	= "msg:close";		/* prefix to close messages */
 
+static const int attachdirection	= 2;		/* 0 default, 1 above, 2 aside, 3 below, 4 bottom, 5 top */
 static const int bargap				= 1;		/* bar padding on/off */
 static const int borderpx			= 1;		/* border pixel of windows */
 static const int gappx				= 4;		/* gaps between windows */
