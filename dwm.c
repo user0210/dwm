@@ -1861,7 +1861,7 @@ manage(Window w, XWindowAttributes *wa)
 	else
 		wc.border_width = c->bw;
 	XConfigureWindow(dpy, w, CWBorderWidth, &wc);
-	XSetWindowBorder(dpy, w, scheme[SchemeBorder][c->isfloating ? ColFloat : ColBorder].pixel);
+	XSetWindowBorder(dpy, w, scheme[SchemeBorder][c->isfloating ? ColFloat : selmon->gappx > tileswitch ? ColBg : ColBorder].pixel);
 	configure(c); /* propagates border_width, if size doesn't change */
 	updatewindowtype(c);
 	updatesizehints(c);
@@ -2993,7 +2993,7 @@ unfocus(Client *c, int setfocus)
 	if (!c)
 		return;
 	grabbuttons(c, 0);
-	XSetWindowBorder(dpy, c->win, scheme[SchemeBorder][c->isfloating ? ColFloat : ColBorder].pixel);
+	XSetWindowBorder(dpy, c->win, scheme[SchemeBorder][c->isfloating ? ColFloat : selmon->gappx > tileswitch ? ColBg : ColBorder].pixel);
 	if (setfocus) {
 		XSetInputFocus(dpy, root, RevertToPointerRoot, CurrentTime);
 		XDeleteProperty(dpy, root, netatom[NetActiveWindow]);
@@ -4587,6 +4587,18 @@ void setcfact(const Arg *arg) {
 void
 setgaps(const Arg *arg)
 {
+	if (tileswitch >= 0 && abs(selmon->gappx + arg->i - tileswitch) <= abs(arg->i)) {
+		Client *c;
+		if ((selmon->gappx + arg->i <= tileswitch && arg->i < 0)) {
+			for (c = nexttiled(selmon->clients); c; c = nexttiled(c->next))
+				XSetWindowBorder(dpy, c->win, scheme[SchemeBorder][ColBorder].pixel);
+			focus(c);
+		} else if ((selmon->gappx + arg->i > tileswitch && arg->i > 0)) {
+			for (c = nexttiled(selmon->clients); c; c = nexttiled(c->next))
+				XSetWindowBorder(dpy, c->win, scheme[SchemeBorder][ColBg].pixel);
+			focus(c);
+		}
+	}
 	if ((arg->i == 0) || (selmon->gappx + arg->i < 0))
 		selmon->gappx = 0;
 	else if (selmon->gappx + arg->i < 50)
