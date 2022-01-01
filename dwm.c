@@ -2211,10 +2211,10 @@ resizeclient(Client *c, int x, int y, int w, int h, int bw)
 	c->oldy = c->y; c->y = wc.y = y;
 	c->oldw = c->w; c->w = wc.width = w;
 	c->oldh = c->h; c->h = wc.height = h;
-	if (c->isfloating && c->floatborderpx >= 0)
+	if (c->isfloating && c->floatborderpx >= 0 && bw != -1)
 		wc.border_width = c->floatborderpx;
 	else {
-		c->oldbw = c->bw; c->bw = wc.border_width = bw;
+		c->oldbw = c->bw; c->bw = wc.border_width = bw == -1 ? 0 : bw;
 	}
 	XConfigureWindow(dpy, c->win, CWX|CWY|CWWidth|CWHeight|CWBorderWidth, &wc);
 	configure(c);
@@ -2485,7 +2485,7 @@ setfullscreen(Client *c, int fullscreen)
 		c->oldstate = c->isfloating | (1 << 1);
 		c->bw = 0;
 		c->isfloating = 1;
-		resizeclient(c, c->mon->mx, c->mon->my, c->mon->mw, c->mon->mh, 0);
+		resizeclient(c, c->mon->mx, c->mon->my, c->mon->mw, c->mon->mh, -1);
 		XRaiseWindow(dpy, c->win);
 	} else if (restorestate && (c->oldstate & (1 << 1))) {
 		c->bw = c->oldbw;
