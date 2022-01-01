@@ -1722,7 +1722,6 @@ togglefloating(const Arg *arg)
 	if (selmon->sel->isfullscreen) /* no support for fullscreen windows */
 		return;
 	selmon->sel->isfloating = !selmon->sel->isfloating || selmon->sel->isfixed;
-	XSetWindowBorder(dpy, selmon->sel->win, scheme[SchemeBorder][selmon->sel->isfloating ? ColFloat : ColBorder].pixel);
 	if (selmon->sel->isfloating)
 		resize(selmon->sel, selmon->sel->x, selmon->sel->y,
 			selmon->sel->w, selmon->sel->h, 0);
