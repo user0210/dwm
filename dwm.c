@@ -1907,10 +1907,7 @@ manage(Window w, XWindowAttributes *wa)
 	updatewindowtype(c);
 	updatesizehints(c);
 	updatewmhints(c);
-	c->sfx = c->x;
-	c->sfy = c->y;
-	c->sfw = c->w;
-	c->sfh = c->h;
+	c->sfx = c->sfy = c->sfw = c->sfh = -9999;
 	XSelectInput(dpy, w, EnterWindowMask|FocusChangeMask|PropertyChangeMask|StructureNotifyMask);
 	grabbuttons(c, 0);
 	if (!c->isfloating)
@@ -2968,18 +2965,23 @@ void
 togglefloating(const Arg *arg)
 {
 	Client *c = selmon->sel;
+	Arg pos_arg;
+	char pos[32] = {"50% 50%"};
+	pos_arg.v = pos;
+
 	if (!c)
 		return;
 	if (c->isfullscreen && c->fakefullscreen != 1) /* no support for fullscreen windows */
 		return;
 	c->isfloating = !c->isfloating || c->isfixed;
-	if (selmon->sel->isfloating)
-		/* restore last known float dimensions */
-		resize(c, c->sfx, c->sfy,
-				c->sfw - 2 * (borderpx - c->bw),
-				c->sfh - 2 * (borderpx - c->bw),
-				borderpx, 0);
-	else {
+	if (selmon->sel->isfloating) {
+		if (c->sfx == -9999) {
+			resize(c, c->x, c->y, c->w - 2 * (borderpx - c->bw), c->h - 2 * (borderpx - c->bw), borderpx, 0);
+			floatpos(&pos_arg);
+		} else
+			/* restore last known float dimensions */
+			resize(c, c->sfx, c->sfy, c->sfw - 2 * (borderpx - c->bw), c->sfh - 2 * (borderpx - c->bw), borderpx, 0);
+	} else {
 		/* save last known float dimensions */
 		c->sfx = c->x;
 		c->sfy = c->y;
