@@ -323,6 +323,7 @@ static void loadxrdb(void);
 static void mirrorlayout(const Arg *arg);
 static Client *nexttagged(Client *c);
 static void notifyhandler(const Arg *arg);
+static void picomset(Client *c);
 static void removesystrayicon(Client *i);
 static void replaceclient(Client *old, Client *new);
 static void resizerequest(XEvent *e);
@@ -400,6 +401,8 @@ unsigned int fsep = 0, fblock = 0;			/* focused bar item */
 unsigned int rtag = 0;
 unsigned int xbutt, ybutt;
 unsigned int dragon;
+unsigned int setpicom = 0;
+static Atom tileset;
 
 static int riodimensions[4] = { -1, -1, -1, -1 };
 static pid_t riopid = 0;
@@ -1574,6 +1577,7 @@ focus(Client *c)
 		attachstack(c);
 		grabbuttons(c, 1);
 		XSetWindowBorder(dpy, c->win, scheme[SchemeBorder][ColFg].pixel);
+		picomset(c);
 		setfocus(c);
 	} else {
 		XSetInputFocus(dpy, root, RevertToPointerRoot, CurrentTime);
@@ -1878,6 +1882,7 @@ manage(Window w, XWindowAttributes *wa)
 		XRaiseWindow(dpy, c->win);
 		XSetWindowBorder(dpy, w, scheme[SchemeBorder][ColFloat].pixel);
 	}
+	picomset(c);
 	/* Do not attach client if it is being swallowed */
 	if (term && swallow(term, c)) {
 		/* Do not let swallowed client steal focus unless the terminal has focus */
@@ -1985,6 +1990,8 @@ monocle(Monitor *m)
 	if (c && !c->isfloating) {
 		XMoveWindow(dpy, c->win, m->wx + m->gappx, m->wy + m->gappx);
 		resize(c, m->wx + m->gappx, m->wy + m->gappx, m->ww - 2 * m->gappx, m->wh - 2 * m->gappx, bw, 0);
+		if (setpicom)
+			picomset(c);
 		c = c->snext;
 	}
 	for (; c; c = c->snext)
@@ -2295,6 +2302,8 @@ restack(Monitor *m)
 				wc.sibling = c->win;
 			}
 	}
+	for (c = m->stack; c; c = c->snext)
+		picomset(c);
 	XSync(dpy, False);
 	while (XCheckMaskEvent(dpy, EnterWindowMask, &ev));
 }
@@ -2535,6 +2544,7 @@ setup(void)
 	xatom[Manager] = XInternAtom(dpy, "MANAGER", False);
 	xatom[Xembed] = XInternAtom(dpy, "_XEMBED", False);
 	xatom[XembedInfo] = XInternAtom(dpy, "_XEMBED_INFO", False);
+	tileset = XInternAtom(dpy, "_PICOM_TILE", False);
 	/* init cursors */
 	cursor[CurNormal] = drw_cur_create(drw, XC_left_ptr);
 	cursor[CurResize] = drw_cur_create(drw, XC_sizing);
@@ -2686,6 +2696,8 @@ tile(Monitor *m)
 			mfacts += c->cfact;
 		else
 			sfacts += c->cfact;
+		if (setpicom)
+			picomset(c);
 	}
 	if(m->nmaster > n)
 		m->nmaster = (n == 0) ? 1 : n;
@@ -2900,6 +2912,7 @@ togglefloating(const Arg *arg)
 		selmon->sel->sfw = selmon->sel->w + ((borderswitch == 1 && selmon->gappx > tileswitch) ? 2 * borderpx : 0);
 		selmon->sel->sfh = selmon->sel->h + ((borderswitch == 1 && selmon->gappx > tileswitch) ? 2 * borderpx : 0);
 	}
+	picomset(selmon->sel);
 	arrange(selmon);
 	arrangemon(selmon);
 }
@@ -4381,6 +4394,19 @@ notifyhandler(const Arg *arg)
 }
 
 void
+picomset(Client *c)
+{
+	if (!c->isfloating && selmon->lt[selmon->sellt]->arrange) {
+		unsigned long tilestat[] = { selmon->gappx > tileswitch ? 0x00000001 : 0x00000002 };
+		XChangeProperty(dpy, c->win, tileset, XA_CARDINAL, 32, PropModeReplace, (unsigned char *)tilestat, 1);
+	} else if (!c->isfloating && selmon->lt[selmon->sellt]->arrange == &monocle && selmon->gappx == 0) {
+		unsigned long tilestat[] = { 0x00000002 };
+		XChangeProperty(dpy, c->win, tileset, XA_CARDINAL, 32, PropModeReplace, (unsigned char *)tilestat, 1);
+	} else
+		XDeleteProperty(dpy, c->win, tileset);
+}
+
+void
 removesystrayicon(Client *i)
 {
 	Client **ii;
@@ -4587,6 +4613,16 @@ void setcfact(const Arg *arg) {
 void
 setgaps(const Arg *arg)
 {
+	int here = selmon->lt[selmon->sellt]->arrange ? tileswitch : 0;
+	setpicom = 1;
+	if (selmon->gappx + arg->i > here && selmon->gappx <= here) {
+		XDeleteProperty(dpy, selmon->barwin, tileset);
+	} else if (selmon->gappx + arg->i <= here && selmon->gappx > here) {
+		unsigned long tilestat[] = { 0x00000002 };
+		XChangeProperty(dpy, selmon->barwin, tileset, XA_CARDINAL, 32, PropModeReplace, (unsigned char *)tilestat, 2);
+	} else
+		setpicom = 0;
+
 	if (tileswitch >= 0 && abs(selmon->gappx + arg->i - tileswitch) <= abs(arg->i)) {
 		Client *c;
 		if ((selmon->gappx + arg->i <= tileswitch && arg->i < 0)) {
