@@ -60,6 +60,8 @@
 #define CLEANMASK(mask)         (mask & ~(numlockmask|LockMask) & (ShiftMask|ControlMask|Mod1Mask|Mod2Mask|Mod3Mask|Mod4Mask|Mod5Mask))
 #define INTERSECT(x,y,w,h,m)    (MAX(0, MIN((x)+(w),(m)->wx+(m)->ww) - MAX((x),(m)->wx)) \
                                * MAX(0, MIN((y)+(h),(m)->wy+(m)->wh) - MAX((y),(m)->wy)))
+#define INTERSECTC(x,y,w,h,z)   (MAX(0, MIN((x)+(w),(z)->x+(z)->w) - MAX((x),(z)->x)) \
+                               * MAX(0, MIN((y)+(h),(z)->y+(z)->h) - MAX((y),(z)->y)))
 #define ISVISIBLEONTAG(C, T)    ((C->tags & T))
 #define ISVISIBLE(C)            ISVISIBLEONTAG(C, C->mon->tagset[C->mon->seltags])
 #define LENGTH(X)               (sizeof X / sizeof X[0])
@@ -148,6 +150,7 @@ struct Client {
 	int isfixed, isfloating, isurgent, neverfocus, oldstate, isfullscreen, isterminal, noswallow;
 	int ignorecfgreqpos, ignorecfgreqsize;
 	int fakefullscreen;
+	int beingmoved;
 	pid_t pid;
 	XImage *icon;
 	Client *next;
@@ -332,10 +335,13 @@ static int is_a_tmux_server(pid_t pid);
 static void loadxrdb(void);
 static void losefullscreen(Client *next);
 static void mirrorlayout(const Arg *arg);
+static void moveorplace(const Arg *arg);
 static Client *nexttagged(Client *c);
 static void notifyhandler(const Arg *arg);
 static void picomset(Client *c);
 static void placedir(const Arg *arg);
+static void placemouse(const Arg *arg);
+static Client *recttoclient(int x, int y, int w, int h);
 static void removesystrayicon(Client *i);
 static void replaceclient(Client *old, Client *new);
 static void resizerequest(XEvent *e);
@@ -2215,6 +2221,8 @@ resizeclient(Client *c, int x, int y, int w, int h, int bw)
 	c->oldy = c->y; c->y = wc.y = y;
 	c->oldw = c->w; c->w = wc.width = w;
 	c->oldh = c->h; c->h = wc.height = h;
+	if (c->beingmoved)
+		return;
 	if (c->isfloating && c->floatborderpx >= 0 && bw != -1)
 		wc.border_width = c->floatborderpx;
 	else {
@@ -4520,6 +4528,14 @@ mirrorlayout(const Arg *arg) {
 	arrange(selmon);
 }
 
+void
+moveorplace(const Arg *arg) {
+	if ((!selmon->lt[selmon->sellt]->arrange || (selmon->sel && selmon->sel->isfloating)))
+		movemouse(arg);
+	else
+		placemouse(arg);
+}
+
 Client *
 nexttagged(Client *c) {
 	Client *walked = c->mon->clients;
@@ -4639,6 +4655,140 @@ placedir(const Arg *arg)
 		}
 		arrange(f->mon);
 	}
+}
+
+void
+placemouse(const Arg *arg)
+{
+	int x, y, px, py, ocx, ocy, nx = -9999, ny = -9999, freemove = 0;
+	Client *c, *r = NULL, *at, *prevr;
+	Monitor *m;
+	XEvent ev;
+	XWindowAttributes wa;
+	Time lasttime = 0;
+	int attachmode, prevattachmode;
+	attachmode = prevattachmode = -1;
+
+	if (!(c = selmon->sel) || !c->mon->lt[c->mon->sellt]->arrange) /* no support for placemouse when floating layout is used */
+		return;
+	if (c->isfullscreen) /* no support placing fullscreen windows by mouse */
+		return;
+	restack(selmon);
+	prevr = c;
+	if (XGrabPointer(dpy, root, False, MOUSEMASK, GrabModeAsync, GrabModeAsync,
+		None, cursor[CurMove]->cursor, CurrentTime) != GrabSuccess)
+		return;
+	c->isfloating = 0;
+	c->beingmoved = 1;
+
+	XGetWindowAttributes(dpy, c->win, &wa);
+	ocx = wa.x;
+	ocy = wa.y;
+
+	if (arg->i == 2) // warp cursor to client center
+		XWarpPointer(dpy, None, c->win, 0, 0, 0, 0, WIDTH(c) / 2, HEIGHT(c) / 2);
+	if (!getrootptr(&x, &y))
+		return;
+	do {
+		XMaskEvent(dpy, MOUSEMASK|ExposureMask|SubstructureRedirectMask, &ev);
+		switch (ev.type) {
+		case ConfigureRequest:
+		case Expose:
+		case MapRequest:
+			handler[ev.type](&ev);
+			break;
+		case MotionNotify:
+			if ((ev.xmotion.time - lasttime) <= (1000 / 60))
+				continue;
+			lasttime = ev.xmotion.time;
+			nx = ocx + (ev.xmotion.x - x);
+			ny = ocy + (ev.xmotion.y - y);
+			if (!freemove && (abs(nx - ocx) > snap || abs(ny - ocy) > snap))
+				freemove = 1;
+			if (freemove)
+				XMoveWindow(dpy, c->win, nx, ny);
+			if ((m = recttomon(ev.xmotion.x, ev.xmotion.y, 1, 1)) && m != selmon)
+				selmon = m;
+			if (arg->i == 1) { // tiled position is relative to the client window center point
+				px = nx + wa.width / 2;
+				py = ny + wa.height / 2;
+			} else { // tiled position is relative to the mouse cursor
+				px = ev.xmotion.x;
+				py = ev.xmotion.y;
+			}
+			r = recttoclient(px, py, 1, 1);
+
+			if (!r || r == c)
+				break;
+			attachmode = 0; // below
+			if (((float)(r->y + r->h - py) / r->h) > ((float)(r->x + r->w - px) / r->w)) {
+				if (abs(r->y - py) < r->h / 2)
+					attachmode = 1; // above
+			} else if (abs(r->x - px) < r->w / 2)
+				attachmode = 1; // above
+			if ((r && r != prevr) || (attachmode != prevattachmode)) {
+				detachstack(c);
+				detach(c);
+				if (c->mon != r->mon) {
+					arrangemon(c->mon);
+					c->tags = r->mon->tagset[r->mon->seltags];
+				}
+				c->mon = r->mon;
+				r->mon->sel = r;
+
+				if (attachmode) {
+					if (r == r->mon->clients)
+						attach(c);
+					else {
+						for (at = r->mon->clients; at->next != r; at = at->next);
+						c->next = at->next;
+						at->next = c;
+					}
+				} else {
+					c->next = r->next;
+					r->next = c;
+				}
+				attachstack(c);
+				arrangemon(r->mon);
+				prevr = r;
+				prevattachmode = attachmode;
+			}
+			break;
+		}
+	} while (ev.type != ButtonRelease);
+	XUngrabPointer(dpy, CurrentTime);
+
+	if ((m = recttomon(ev.xmotion.x, ev.xmotion.y, 1, 1)) && m != c->mon) {
+		detach(c);
+		detachstack(c);
+		arrangemon(c->mon);
+		c->mon = m;
+		c->tags = m->tagset[m->seltags];
+		attach(c);
+		attachstack(c);
+		selmon = m;
+	}
+	focus(c);
+	c->beingmoved = 0;
+
+	if (nx != -9999)
+		resize(c, nx, ny, c->w, c->h, c->bw, 0);
+	arrangemon(c->mon);
+}
+
+Client *
+recttoclient(int x, int y, int w, int h)
+{
+	Client *c, *r = NULL;
+	int a, area = 0;
+
+	for (c = nexttiled(selmon->clients); c; c = nexttiled(c->next)) {
+		if ((a = INTERSECTC(x, y, w, h, c)) > area) {
+			area = a;
+			r = c;
+		}
+	}
+	return r;
 }
 
 void
