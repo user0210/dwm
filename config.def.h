@@ -252,6 +252,8 @@ static Key keys[] = {
 	{ MODKEY,          				XK_period,			focusmon,				{.i = +1 } },
 	{ MODKEY|ShiftMask,				XK_comma,			tagmon,					{.i = -1 } },
 	{ MODKEY|ShiftMask,				XK_period,			tagmon,					{.i = +1 } },
+	{ MODKEY|ControlMask,			XK_f,				togglefullscreen,		{0} },
+	{ MODKEY|ShiftMask,				XK_f,				togglefakefullscreen,	{0} },
 	{ MODKEY,						XK_minus,			setgaps,				{.i = -2 } },
 	{ MODKEY,						XK_plus,			setgaps,				{.i = +2 } },
 	{ MODKEY|ShiftMask,				XK_o,				setgaps,				{.i = 0  } },
