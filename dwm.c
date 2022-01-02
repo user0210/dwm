@@ -2492,7 +2492,7 @@ setfullscreen(Client *c, int fullscreen)
 		c->isfloating = c->oldstate = c->oldstate & 1;
 		if (restorefakefullscreen || c->fakefullscreen == 3)
 			c->fakefullscreen = 1;
-		if (c->isfloating) {
+		if (c->isfloating || !c->mon->lt[c->mon->sellt]->arrange) {
 			c->x = MAX(c->mon->wx, c->oldx);
 			c->y = MAX(c->mon->wy, c->oldy);
 			c->w = MIN(c->mon->ww - c->x - 2*c->bw, c->oldw);
