@@ -30,6 +30,7 @@ static const char *tags[] = { "1", "2", "3", "4", "5", "6" };
 
 /* barorder and theme */
 static const int seppad 			= 5;		/* top and bottom padding of seperator (if "> bh" = dot or "< 0" dotradius) */
+static const int statussep			= 1;		/* 0 = off, 1 = on, 2 = hide on focus */
 static const int bartheme			= 1;		/* 0 = off, 1 = on */
 static const int statustheme		= 2;		/* 0 = classic, 1 = button-theme, 2 = float-theme */
 static const int tabbartheme		= 2;		/* 0 = classic, 1 = button-theme, 2 = float-theme */
@@ -236,7 +237,11 @@ static Button buttons[] = {
 	{ ClkLtSymbol,			0,				Button1,		setlayout,			{0} },
 	{ ClkLtSymbol,			0,				Button3,		setlayout,			{.v = &layouts[2]} },
 	{ ClkWinTitle,			0,				Button2,		zoom,				{0} },
-	{ ClkStatusText,		0,				Button2,		spawn,				{.v = termcmd } },
+	{ ClkStatusText,		0,				Button1,		sigdwmblocks,		{.i = 1 } },
+	{ ClkStatusText,		0,				Button2,		sigdwmblocks,		{.i = 2 } },
+	{ ClkStatusText,		0,				Button3,		sigdwmblocks,		{.i = 3 } },
+	{ ClkStatusText,		0,				Button4,		sigdwmblocks,		{.i = 4 } },
+	{ ClkStatusText,		0,				Button5,		sigdwmblocks,		{.i = 5 } },
 	{ ClkClientWin,			MODKEY,			Button1,		movemouse,			{0} },
 	{ ClkClientWin,			MODKEY,			Button2,		togglefloating,		{0} },
 	{ ClkClientWin,			MODKEY,			Button3,		resizemouse,		{0} },

@@ -272,10 +272,12 @@ static int xerrorstart(Display *dpy, XErrorEvent *ee);
 static void zoom(const Arg *arg);
 
 /* patch - function declarations */
+static void copyvalidchars(char *text, char *rawtext);
 static void drawebar(char *text, Monitor *m, int xpos);
 static void drawtheme(int x, int s, int status, int theme);
 static void drawtaggrid(Monitor *m, int *x_pos, unsigned int occ);
 static Atom getatomprop(Client *c, Atom prop);
+static int getdwmblockspid();
 static unsigned int getsystraywidth();
 static void mirrorlayout(const Arg *arg);
 static void removesystrayicon(Client *i);
@@ -283,6 +285,8 @@ static void resizerequest(XEvent *e);
 static void rotatelayoutaxis(const Arg *arg);
 static void setgaps(const Arg *arg);
 static void setcfact(const Arg *arg);
+static void sigdwmblocks(const Arg *arg);
+static int status2dtextlength(char *stext);
 static void switchtag(const Arg *arg);
 static Monitor *systraytomon(Monitor *m);
 static void toggleebar(const Arg *arg);
@@ -295,7 +299,8 @@ static void xinitvisual();
 
 /* variables */
 static const char broken[] = "broken";
-static char stext[256];
+static char stext[1024];
+static char rawstext[1024];
 static int screen;
 static int sw, sh;								/* X display screen geometry width, height */
 static int bh, blw, stw, tgw, sep, gap;			/* bar geometry */
@@ -340,6 +345,9 @@ static int depth;
 static int useargb = 0;
 static Colormap cmap;
 static Visual *visual;
+
+static int dwmblockssig;
+pid_t dwmblockspid = 0;
 
 /* configuration, allows nested code to access above variables */
 #include "config.h"
@@ -529,6 +537,33 @@ int buttontag(Monitor *m, int x, int xpos, int ypos, int click, Arg *arg) {
 	return click;
 }
 
+int
+buttonstatus(int l, int xpos, int click)
+{
+	char ch, *text = rawstext;
+	int i = -1, x = l;
+
+	dwmblockssig = -1;
+	while (text[++i]) {
+		if ((unsigned char)text[i] < ' ') {
+			ch = text[i];
+			text[i] = '\0';
+			x += status2dtextlength(text);
+			text[i] = ch;
+			text += i+1;
+			i = -1;
+			if (x >= xpos && dwmblockssig != -1)
+				break;
+			dwmblockssig = ch;
+		}
+	}
+	if (dwmblockssig == -1)
+		dwmblockssig = 0;
+
+	click = ClkStatusText;
+	return click;
+}
+
 void
 buttonpress(XEvent *e)
 {
@@ -605,7 +640,7 @@ buttonpress(XEvent *e)
 			}
 		}
 		if (set == 0 && ev->x > l && ev->x < r)
-			click = ClkStatusText;
+			click = buttonstatus(l, ev->x, click);
 
 	} else if ((c = wintoclient(ev->window))) {
 		focus(c);
@@ -729,7 +764,7 @@ clientmessage(XEvent *e)
 			XSync(dpy, False);
 			setclientstate(c, NormalState);
 			if (esys)
-				drawebar(stext, selmon, 0);
+				drawebar(rawstext, selmon, 0);
 			else
 				drawbar(selmon, 0);
 		}
@@ -898,7 +933,7 @@ destroynotify(XEvent *e)
 	else if (showsystray && (c = wintosystrayicon(ev->window))) {
 		removesystrayicon(c);
 		if (esys)
-			drawebar(stext, selmon, 0);
+			drawebar(rawstext, selmon, 0);
 		else
 			drawbar(selmon, 0);
 	}
@@ -1060,24 +1095,150 @@ int drawsystray(Monitor *m, int lr, int p, int xpos) {
 	return lr + stw;
 }
 
-void drawstatus(char* stext, Monitor *m, int l, int r, int xpos) {
-	int saw = TEXTW(stext) - lrpad + 2; /* 2px right padding */
-	int x = l;
-	int w = w = m->ww - l - r;
+void
+drawstatus(char* stext, Monitor *m, int xpos, int l, int r)
+{
+	int prev = 1, len, w, x = l, sep = l, block = 0, k = -1, i = -1;
+	char ch, *p, *text, blocktext[1024];
+	short isCode = 0;
 
-	if (xpos && xpos > x && xpos <= x + saw) {
-		fsep = x;
-		fblock = saw;
+	drawtheme(0,0,0,0);
+	drw_rect(drw, l, 0, selmon->ww - l - r, bh, 1, 1);
+
+	len = strlen(stext);
+	if (!(text = (char*) malloc(sizeof(char)*(len + 1))))
+		die("malloc");
+
+	ch = '\n';
+	strncat(stext, &ch, 1);
+
+	p = text;
+
+	while (stext[++k]) {
+		blocktext[++i] = stext[k];
+		if ((unsigned char)stext[k] < ' ') {
+			ch = stext[k];
+			stext[k] = blocktext[i] = '\0';
+			while (blocktext[++i])
+				blocktext[i] = '\0';
+			block = status2dtextlength(stext);
+			if (xpos && xpos > sep && xpos <= sep + block) {
+				fsep = sep;
+				fblock = block;
+			}
+			if (sep == fsep && block == fblock && block)
+				drawtheme(0,0,2,statustheme);
+			else
+				drawtheme(0,0,1,statustheme);
+
+			/* process status text-element */
+
+			copyvalidchars(text, blocktext);
+			text[len] = '\0';
+			i = -1;
+			while (text[++i]) {
+				if (text[i] == '^' && !isCode) {
+					isCode = 1;
+					text[i] = '\0';
+					w = TEXTW(text) - lrpad;
+					if (x + w >= selmon->ww - r)
+						return;
+					drw_text(drw, x, (bartheme && statustheme) ? sep != fsep || block != fblock ? -1 : 0 : 0, w, bh, 0, text, 0);
+					x += w;
+					/* process code */
+					while (text[++i] != '^') {
+						if (text[i] == 'c') {
+							char buf[8];
+							if (i + 7 >= len) {
+								i += 7;
+								len = 0;
+								break;
+							}
+							memcpy(buf, (char*)text+i+1, 7);
+							buf[7] = '\0';
+							drw_clr_create(drw, &drw->scheme[ColFg], buf, alphas[(bartheme ? SchemeUnfocus : SchemeBar)][ColFg]);
+							i += 7;
+						} else if (text[i] == 'b') {
+							char buf[8];
+							if (i + 7 >= len) {
+								i += 7;
+								len = 0;
+								break;
+							}
+							memcpy(buf, (char*)text+i+1, 7);
+							buf[7] = '\0';
+							drw_clr_create(drw, &drw->scheme[ColBg], buf, alphas[(bartheme ? SchemeUnfocus : SchemeBar)][ColBg]);
+							i += 7;
+						} else if (text[i] == 'd') {
+							if (sep == fsep && block == fblock && block)
+								drawtheme(0,0,2,statustheme);
+							else
+								drawtheme(0,0,1,statustheme);
+						} else if (text[i] == 'r') {
+							int rx = atoi(text + ++i);
+							while (text[++i] != ',');
+							int ry = atoi(text + ++i);
+							while (text[++i] != ',');
+							int rw = atoi(text + ++i);
+							while (text[++i] != ',');
+							int rh = atoi(text + ++i);
+							if (ry < 0)
+								ry = 0;
+							if (rx < 0)
+								rx = 0;
+							drw_rect(drw, rx + x, ry, rw, rh, 1, 0);
+						} else if (text[i] == 'f') {
+							x += atoi(text + ++i);
+						}
+					}
+					text = text + i + 1;
+					len -= i + 1;
+					i = -1;
+					isCode = 0;
+					if (len <= 0)
+						break;
+				}
+			}
+			if (!isCode && len > 0) {
+				w = TEXTW(text) - lrpad;
+				if (x + w >= selmon->ww - r)
+					return;
+				drw_text(drw, x, (bartheme && statustheme) ? sep != fsep || block != fblock ? -1 : 0 : 0, w, bh, 0, text, 0);
+				x += w;
+			}
+			i = -1;
+
+			if (block > 0) {
+				if (bartheme && statustheme) {
+					if (sep != fsep || block != fblock)
+						drawtheme(sep, block, 1, statustheme);
+					else
+						drawtheme(sep, block, 2, statustheme);
+				} else if (statussep) {
+					if ((sep == fsep && block == fblock) && (statussep == 2))
+						prev = 1;
+					else if (prev == 0)
+						drawsep(m, sep, 0, 0, 0);
+					else if (prev != 0)
+						prev = 0;
+				}
+			}
+
+			sep += block;
+			stext[k] = ch;
+			stext += k+1;
+			k = -1;
+		}
 	}
-	if (m == selmon) { /* status is only drawn on selected monitor */
-		if (x == fsep && saw == fblock && saw)
-			drawtheme(0,0,2,statustheme);
-		else
-			drawtheme(0,0,0,0);
-		drw_text(drw, x, 0, saw, bh, 0, stext, 0);
-		drawtheme(0,0,0,0);
-		drw_rect(drw, x + saw, 0, w - saw, bh, 1, 1);
+	if (xpos && xpos > sep + block && xpos < selmon->ww - r) {
+		fsep = sep + block;
+		fblock = selmon->ww - sep - block - r;
 	}
+
+	drawtheme(0,0,0,0);
+	drw_rect(drw, x, 0, selmon->ww - x - r, bh, 1, 1);
+
+	free(p);
 }
 
 int drawltsymbol(Monitor *m, int lr, int p, int xpos) {
@@ -1182,7 +1343,7 @@ drawebar(char* stext, Monitor *m, int xpos)
 		if (strcmp ("seperator", ebarorder[i]) == 0)
 			lr = drawsep(m, lr, pos, xpos, 1);
 	}
-	drawstatus(stext, m, l, r, xpos);
+	drawstatus(stext, m, xpos, l, r);
 	drw_map(drw, m->ebarwin, 0, 0, m->ww - (bargap ? 2 * m->gappx : 0), bh);
 }
 
@@ -1193,7 +1354,7 @@ drawbars(void)
 
 	for (m = mons; m; m = m->next) {
 		drawbar(m, 0);
-		drawebar(stext, m, 0);
+		drawebar(rawstext, m, 0);
 	}
 }
 
@@ -1206,11 +1367,11 @@ enternotify(XEvent *e)
 
 	fblock = fsep = 0;
 	if (ev->window == selmon->barwin)
-		drawebar(stext, selmon, 0);
+		drawebar(rawstext, selmon, 0);
 	else if (ev->window == selmon->ebarwin)
 		drawbar(selmon, 0);
 	else {
-		drawebar(stext, selmon, 0);
+		drawebar(rawstext, selmon, 0);
 		drawbar(selmon, 0);
 	}
 
@@ -1234,7 +1395,7 @@ expose(XEvent *e)
 
 	if (ev->count == 0 && (m = wintomon(ev->window))) {
 		drawbar(m, 0);
-		drawebar(stext, m, 0);
+		drawebar(rawstext, m, 0);
 	}
 }
 
@@ -1466,7 +1627,7 @@ keypress(XEvent *e)
 	if (fblock || fsep) {
 		fblock = fsep = 0;
 		drawbar(selmon, 0);
-		drawebar(stext, selmon, 0);
+		drawebar(rawstext, selmon, 0);
 	}
 	ev = &e->xkey;
 	keysym = XKeycodeToKeysym(dpy, (KeyCode)ev->keycode, 0);
@@ -1578,7 +1739,7 @@ maprequest(XEvent *e)
 	if (showsystray && (i = wintosystrayicon(ev->window))) {
 		sendevent(i->win, netatom[Xembed], StructureNotifyMask, CurrentTime, XEMBED_WINDOW_ACTIVATE, 0, systray->win, XEMBED_EMBEDDED_VERSION);
 		if (esys)
-			drawebar(stext, selmon, 0);
+			drawebar(rawstext, selmon, 0);
 		else
 			drawbar(selmon, 0);
 	}
@@ -1624,7 +1785,7 @@ motionnotify(XEvent *e)
 		if (ev->x < fsep || ev->x > fsep + fblock) {
 			fblock = fsep = 0;
 			if (ev->window == selmon->ebarwin)
-				drawebar(stext, selmon, ev->x);
+				drawebar(rawstext, selmon, ev->x);
 			else
 				drawbar(selmon, ev->x);
 		} else
@@ -1732,7 +1893,7 @@ propertynotify(XEvent *e)
 		else
 			updatesystrayiconstate(c, ev);
 		if (esys)
-			drawebar(stext, selmon, 0);
+			drawebar(rawstext, selmon, 0);
 		else
 			drawbar(selmon, 0);
 	}
@@ -1874,7 +2035,7 @@ restack(Monitor *m)
 	XWindowChanges wc;
 
 	drawbar(m, 0);
-	drawebar(stext, m, 0);
+	drawebar(rawstext, m, 0);
 	if (!m->sel)
 		return;
 	if (m->sel->isfloating || !m->lt[m->sellt]->arrange)
@@ -2041,7 +2202,7 @@ setlayout(const Arg *arg)
 		arrange(selmon);
 	else {
 		drawbar(selmon, 0);
-		drawebar(stext, selmon, 0);
+		drawebar(rawstext, selmon, 0);
 	}
 	arrangemon(selmon);
 }
@@ -2572,7 +2733,7 @@ unmapnotify(XEvent *e)
 		 * _not_ destroy them. We map those windows back */
 		XMapRaised(dpy, c->win);
 		if (esys)
-			drawebar(stext, selmon, 0);
+			drawebar(rawstext, selmon, 0);
 		else
 			drawbar(selmon, 0);
 	}
@@ -2808,9 +2969,11 @@ updatesizehints(Client *c)
 void
 updatestatus(void)
 {
-	if (!gettextprop(root, XA_WM_NAME, stext, sizeof(stext)))
+	if (!gettextprop(root, XA_WM_NAME, rawstext, sizeof(rawstext)))
 		strcpy(stext, "dwm-"VERSION);
-	drawebar(stext, selmon, 0);
+	else
+		copyvalidchars(stext, rawstext);
+	drawebar(rawstext, selmon, 0);
 }
 
 void
@@ -2975,6 +3138,19 @@ zoom(const Arg *arg)
 /* patch - function implementations */
 
 void
+copyvalidchars(char *text, char *rawtext)
+{
+	int i = -1, j = 0;
+
+	while (rawtext[++i]) {
+		if ((unsigned char)rawtext[i] >= ' ') {
+			text[j++] = rawtext[i];
+		}
+	}
+	text[j] = '\0';
+}
+
+void
 drawtheme(int x, int s, int status, int theme) {
 	/* STATUS 		 THEME
 	 * unfocus 	= 1  default 	= 0
@@ -3099,6 +3275,18 @@ drawtaggrid(Monitor *m, int *x_pos, unsigned int occ)
 	*x_pos = max_x + 1;
 }
 
+int
+getdwmblockspid()
+{
+	char buf[16];
+	FILE *fp = popen("pidof -s dwmblocks", "r");
+	if (fgets(buf, sizeof(buf), fp));
+	pid_t pid = strtoul(buf, NULL, 10);
+	pclose(fp);
+	dwmblockspid = pid;
+	return pid != 0 ? 0 : -1;
+}
+
 unsigned int
 getsystraywidth()
 {
@@ -3140,7 +3328,7 @@ resizerequest(XEvent *e)
 	if ((i = wintosystrayicon(ev->window))) {
 		updatesystrayicongeom(i, ev->width, ev->height);
 		if (esys)
-			drawebar(stext, selmon, 0);
+			drawebar(rawstext, selmon, 0);
 		else
 			drawbar(selmon, 0);
 	}
@@ -3196,6 +3384,62 @@ setgaps(const Arg *arg)
 		XMoveResizeWindow(dpy, selmon->ebarwin, selmon->wx + selmon->gappx, selmon->eby, selmon->ww - 2 * selmon->gappx, bh);
 	}
 	arrangemon(selmon);
+}
+
+void
+sigdwmblocks(const Arg *arg)
+{
+	union sigval sv;
+	sv.sival_int = (dwmblockssig << 8) | arg->i;
+	if (!dwmblockspid)
+		if (getdwmblockspid() == -1)
+			return;
+
+	if (sigqueue(dwmblockspid, SIGUSR1, sv) == -1) {
+		if (errno == ESRCH) {
+			if (!getdwmblockspid())
+				sigqueue(dwmblockspid, SIGUSR1, sv);
+		}
+	}
+}
+
+int
+status2dtextlength(char* stext)
+{
+	int i, w, len;
+	short isCode = 0;
+	char *text;
+	char *p;
+
+	len = strlen(stext) + 1;
+	if (!(text = (char*) malloc(sizeof(char)*len)))
+		die("malloc");
+	p = text;
+	copyvalidchars(text, stext);
+
+	/* compute width of the status text */
+	w = 0;
+	i = -1;
+	while (text[++i]) {
+		if (text[i] == '^') {
+			if (!isCode) {
+				isCode = 1;
+				text[i] = '\0';
+				w += TEXTW(text) - lrpad;
+				text[i] = '^';
+				if (text[++i] == 'f')
+					w += atoi(text + ++i);
+			} else {
+				isCode = 0;
+				text = text + i + 1;
+				i = -1;
+			}
+		}
+	}
+	if (!isCode)
+		w += TEXTW(text) - lrpad;
+	free(p);
+	return w;
 }
 
 void
