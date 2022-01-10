@@ -59,7 +59,7 @@
 
 /* enums */
 enum { CurNormal, CurResize, CurMove, CurLast }; /* cursor */
-enum { SchemeBar, SchemeSelect, SchemeBorder, SchemeFocus }; /* color schemes */
+enum { SchemeBar, SchemeSelect, SchemeBorder, SchemeFocus, SchemeTag }; /* color schemes */
 enum { NetSupported, NetWMName, NetWMState, NetWMCheck,
        NetWMFullscreen, NetActiveWindow, NetWMWindowType,
        NetWMWindowTypeDialog, NetClientList, NetLast }; /* EWMH atoms */
@@ -234,6 +234,10 @@ static int xerror(Display *dpy, XErrorEvent *ee);
 static int xerrordummy(Display *dpy, XErrorEvent *ee);
 static int xerrorstart(Display *dpy, XErrorEvent *ee);
 static void zoom(const Arg *arg);
+
+/* patch - function declarations */
+static void drawtaggrid(Monitor *m, int *x_pos, unsigned int occ);
+static void switchtag(const Arg *arg);
 
 /* variables */
 static const char broken[] = "broken";
@@ -419,20 +423,31 @@ attachstack(Client *c)
 
 /* buttonpress-functions */
 
-int buttontag(Monitor *m, int x, int xpos, int click, Arg *arg) {
+int buttontag(Monitor *m, int x, int xpos, int ypos, int click, Arg *arg) {
 	Client *c;
-	unsigned int i = 0, occ = 0;
+	unsigned int columns, i = 0, occ = 0;
 
-	for (c = m->clients; c; c = c->next)
-		occ |= c->tags == 255 ? 0 : c->tags;
-	do {
-		/* do not reserve space for vacant tags */
-		if (!(occ & 1 << i || m->tagset[m->seltags] & 1 << i))
-			continue;
-		x += TEXTW(tags[i]);
-	} while (xpos > x && ++i < LENGTH(tags));
-	if(i < LENGTH(tags)) {
+	columns = LENGTH(tags) / tagrows + ((LENGTH(tags) % tagrows > 0) ? 1 : 0);
+
+	if (drawtagmask & DRAWCLASSICTAGS) {
+		for (c = m->clients; c; c = c->next)
+			occ |= c->tags == 255 ? 0 : c->tags;
+		do {
+			/* do not reserve space for vacant tags */
+			if (!(occ & 1 << i || m->tagset[m->seltags] & 1 << i))
+				continue;
+			x += TEXTW(tags[i]);
+		} while (xpos > x && ++i < LENGTH(tags));
+		if(i < LENGTH(tags)) {
+			click = ClkTagBar;
+			arg->ui = 1 << i;
+		}
+	} else if (xpos < x + columns * bh / tagrows && (drawtagmask & DRAWTAGGRID)) {
 		click = ClkTagBar;
+		i = (xpos - x) / (bh / tagrows);
+		i = i + columns * (ypos / (bh / tagrows));
+		if (i >= LENGTH(tags))
+			i = LENGTH(tags) - 1;
 		arg->ui = 1 << i;
 	}
 	return click;
@@ -464,7 +479,7 @@ buttonpress(XEvent *e)
 				else {r = lr; break;}
 			}
 			if (strcmp ("tagbar", barorder[i]) == 0) {
-				if (pos * ev->x < pos * (lr + pos * tgw)) {click = buttontag(m, lr - (pos < 0 ? tgw : 0), ev->x, click, &arg); set = 1; }
+				if (pos * ev->x < pos * (lr + pos * tgw)) {click = buttontag(m, lr - (pos < 0 ? tgw : 0), ev->x, ev->y, click, &arg); set = 1; }
 				else lr = lr + pos * tgw;
 			} else if (strcmp ("ltsymbol", barorder[i]) == 0) {
 				if (pos * ev->x < pos * (lr + pos * blw)) { click = ClkLtSymbol; set = 1; }
@@ -780,24 +795,36 @@ int drawtag(Monitor *m, int lr, int p, int xpos) {
 		if (c->isurgent)
 			urg |= c->tags;
 	}
-	for (i = p ? LENGTH(tags) - 1 : 0; p ? i >= 0 : i < LENGTH(tags); p ? i-- : i++) {
-		/* do not draw vacant tags */
-		if (!(occ & 1 << i || m->tagset[m->seltags] & 1 << i))
-			continue;
-		w = TEXTW(tags[i]);
-		x = p ? m->ww - lr - w : lr;
+	if (drawtagmask & DRAWCLASSICTAGS) {
+		for (i = p ? LENGTH(tags) - 1 : 0; p ? i >= 0 : i < LENGTH(tags); p ? i-- : i++) {
+			/* do not draw vacant tags */
+			if (!(occ & 1 << i || m->tagset[m->seltags] & 1 << i))
+				continue;
+			w = TEXTW(tags[i]);
+			x = p ? m->ww - lr - w : lr;
 
+			if (xpos && xpos > x && xpos <= x + w) {
+				fsep = x;
+				fblock = w;
+			}
+			if (m->tagset[m->seltags] & 1 << i)
+				drw_setscheme(drw, scheme[SchemeSelect]);
+			else if (x == fsep && w == fblock && w)
+				drw_setscheme(drw, scheme[SchemeFocus]);
+			else
+				drw_setscheme(drw, scheme[SchemeBar]);
+			drw_text(drw, x, 0, w, bh, lrpad / 2, tags[i], urg & 1 << i);
+			lr = lr + w;
+		}
+	}
+	if (drawtagmask & DRAWTAGGRID) {
+		w = bh / tagrows * (LENGTH(tags) / tagrows + ((LENGTH(tags) % tagrows > 0) ? 1 : 0));
+		x = p ? m->ww - lr - w : lr;
 		if (xpos && xpos > x && xpos <= x + w) {
 			fsep = x;
 			fblock = w;
 		}
-		if (m->tagset[m->seltags] & 1 << i)
-			drw_setscheme(drw, scheme[SchemeSelect]);
-		else if (x == fsep && w == fblock && w)
-			drw_setscheme(drw, scheme[SchemeFocus]);
-		else
-			drw_setscheme(drw, scheme[SchemeBar]);
-		drw_text(drw, x, 0, w, bh, lrpad / 2, tags[i], urg & 1 << i);
+		drawtaggrid(m,&x,occ);
 		lr = lr + w;
 	}
 	tgw = lr - tgw;
@@ -2290,6 +2317,114 @@ zoom(const Arg *arg)
 		if (!c || !(c = nexttiled(c->next)))
 			return;
 	pop(c);
+}
+
+/* patch - function implementations */
+void
+drawtaggrid(Monitor *m, int *x_pos, unsigned int occ)
+{
+	unsigned int x, y, h, max_x, columns;
+	int invert, i,j, k;
+	
+	h = bh / tagrows;
+	x = max_x = *x_pos;
+	y = 0;
+	columns = LENGTH(tags) / tagrows + ((LENGTH(tags) % tagrows > 0) ? 1 : 0);
+	
+	/* Firstly we will fill the borders of squares */
+	
+	XSetForeground(drw->dpy, drw->gc, scheme[SchemeTag][ColBorder].pixel);
+	XFillRectangle(dpy, drw->drawable, drw->gc, x, y, h*columns + 1, bh);
+	
+	/* We will draw LENGTH(tags) squares in tagraws raws. */
+	for(j = 0,  i= 0; j < tagrows; j++) {
+		x = *x_pos;
+		for (k = 0; k < columns && i < LENGTH(tags); k++, i++) {
+			invert = m->tagset[m->seltags] & 1 << i ? 0 : 1;
+			
+			/* Select active color for current square */
+			XSetForeground(drw->dpy, drw->gc, !invert ? scheme[SchemeTag][ColFg].pixel : scheme[SchemeTag][ColBg].pixel);
+			XFillRectangle(dpy, drw->drawable, drw->gc, x+1, y+1, h-1, h-1);
+			
+			/* Mark square if tag has client */
+			if (occ & 1 << i) {
+				XSetForeground(drw->dpy, drw->gc, !invert ? scheme[SchemeTag][ColBg].pixel : scheme[SchemeTag][ColFloat].pixel);
+				XFillRectangle(dpy, drw->drawable, drw->gc, x + 1, y + 1, h / 2, h / 2);
+			}
+			x += h;
+			if (x > max_x)
+				max_x = x;
+		}
+		y += h;
+	}
+	*x_pos = max_x + 1;
+}
+
+void
+switchtag(const Arg *arg)
+{
+	unsigned int columns;
+	unsigned int new_tagset = 0;
+	unsigned int pos, i;
+	int col, row;
+	Arg new_arg;
+	
+	columns = (drawtagmask & DRAWCLASSICTAGS) ? LENGTH(tags) : LENGTH(tags) / tagrows + ((LENGTH(tags) % tagrows > 0) ? 1 : 0);
+	
+	for (i = 0; i < LENGTH(tags); ++i) {
+		if (!(selmon->tagset[selmon->seltags] & 1 << i))
+			continue;
+		pos = i;
+		row = pos / columns;
+		col = pos % columns;
+		if (arg->ui & SWITCHTAG_UP) {     /* UP */
+			row --;
+			if (row < 0)
+				row = tagrows - 1;
+			do {
+				pos = row * columns + col;
+				row --;
+			} while (pos >= LENGTH(tags));
+		}
+		if (arg->ui & SWITCHTAG_DOWN) {     /* DOWN */
+			row ++;
+			if (row >= tagrows)
+				row = 0;
+			pos = row * columns + col;
+			if (pos >= LENGTH(tags))
+				row = 0;
+			pos = row * columns + col;
+		}
+		if (arg->ui & SWITCHTAG_LEFT) {     /* LEFT */
+			col --;
+			if (col < 0)
+				col = columns - 1;
+			do {
+				pos = row * columns + col;
+				col --;
+			} while (pos >= LENGTH(tags));
+		}
+		if (arg->ui & SWITCHTAG_RIGHT) {     /* RIGHT */
+			col ++;
+			if (col >= columns)
+				col = 0;
+			pos = row * columns + col;
+			if (pos >= LENGTH(tags)) {
+				col = 0;
+				pos = row * columns + col;
+			}
+		}
+		new_tagset |= 1 << pos;
+	}
+	new_arg.ui = new_tagset;
+	if (arg->ui & SWITCHTAG_TOGGLETAG)
+		toggletag(&new_arg);
+	if (arg->ui & SWITCHTAG_TAG)
+		tag(&new_arg);
+	if (arg->ui & SWITCHTAG_VIEW)
+		view (&new_arg);
+	if (arg->ui & SWITCHTAG_TOGGLEVIEW)
+		toggleview (&new_arg);
 }
 
 int

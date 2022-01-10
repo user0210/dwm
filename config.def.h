@@ -8,8 +8,24 @@
 /* See LICENSE file for copyright and license details. */
 
 
+/* grid of tags */
+#define DRAWCLASSICTAGS				1 << 0
+#define DRAWTAGGRID					1 << 1
+
+#define SWITCHTAG_UP				1 << 0
+#define SWITCHTAG_DOWN				1 << 1
+#define SWITCHTAG_LEFT				1 << 2
+#define SWITCHTAG_RIGHT				1 << 3
+#define SWITCHTAG_TOGGLETAG			1 << 4
+#define SWITCHTAG_TAG				1 << 5
+#define SWITCHTAG_VIEW				1 << 6
+#define SWITCHTAG_TOGGLEVIEW		1 << 7
+
+static const int drawtagmask		= DRAWCLASSICTAGS; /* | DRAWCLASSICTAGS | DRAWTAGGRID | */
+static const int tagrows			= 2;
+
 /* tagging */
-static const char *tags[] = { "1", "2", "3", "4", "5", "6", "7", "8", "9" };
+static const char *tags[] = { "1", "2", "3", "4", "5", "6" };
 
 
 /* appearance */
@@ -48,6 +64,10 @@ static const char foc_fg[]			= "#222222";
 static const char foc_bg[]			= "#eeeeee";
 static const char foc_brd[]			= "#444444";
 static const char foc_flo[]			= "#bbbbbb";
+static const char tag_fg[]			= "#005577";
+static const char tag_bg[]			= "#eeeeee";
+static const char tag_brd[]			= "#222222";
+static const char tag_flo[]			= "#222222";
 
 static const char *colors[][4]		= {
 	/*					fg			bg			border		float   */
@@ -55,6 +75,7 @@ static const char *colors[][4]		= {
 	[SchemeSelect]	= { sel_fg,		sel_bg,		sel_brd,	sel_flo	},
 	[SchemeBorder]	= { brd_fg,		brd_bg,		brd_brd,	brd_flo },
 	[SchemeFocus]	= { foc_fg,		foc_bg,		foc_brd,	foc_flo },
+	[SchemeTag]		= { tag_fg,		tag_bg,		tag_brd,	tag_flo },
 };
 
 
@@ -131,6 +152,16 @@ static Key keys[] = {
 	{ MODKEY|ShiftMask,				XK_comma,			tagmon,					{.i = -1 } },
 	{ MODKEY|ShiftMask,				XK_period,			tagmon,					{.i = +1 } },
 	{ MODKEY|ControlMask|ShiftMask,	XK_q,				quit,					{0} },
+
+    { MODKEY|ALT,					XK_k,				switchtag,				{ .ui = SWITCHTAG_UP     | SWITCHTAG_VIEW } },
+    { MODKEY|ALT,					XK_j,				switchtag,				{ .ui = SWITCHTAG_DOWN   | SWITCHTAG_VIEW } },
+    { MODKEY|ALT,					XK_l,				switchtag,				{ .ui = SWITCHTAG_RIGHT  | SWITCHTAG_VIEW } },
+    { MODKEY|ALT,					XK_h,				switchtag,				{ .ui = SWITCHTAG_LEFT   | SWITCHTAG_VIEW } },
+    { MODKEY|ControlMask|ALT,		XK_k,				switchtag,				{ .ui = SWITCHTAG_UP     | SWITCHTAG_TAG | SWITCHTAG_VIEW } },
+    { MODKEY|ControlMask|ALT,		XK_j,				switchtag,				{ .ui = SWITCHTAG_DOWN   | SWITCHTAG_TAG | SWITCHTAG_VIEW } },
+    { MODKEY|ControlMask|ALT,		XK_l,				switchtag,				{ .ui = SWITCHTAG_RIGHT  | SWITCHTAG_TAG | SWITCHTAG_VIEW } },
+    { MODKEY|ControlMask|ALT,		XK_h,				switchtag,				{ .ui = SWITCHTAG_LEFT   | SWITCHTAG_TAG | SWITCHTAG_VIEW } },
+
 	TAGKEYS(						XK_1,										0)
 	TAGKEYS(						XK_2,										1)
 	TAGKEYS(						XK_3,										2)
