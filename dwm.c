@@ -86,7 +86,7 @@ enum { NetSupported, NetSystemTray, NetSystemTrayOP, NetSystemTrayOrientation, N
        NetWMName, NetWMState, NetWMFullscreen, NetActiveWindow, NetWMWindowType, NetWMWindowTypeDock,
        NetSystemTrayOrientationHorz, NetWMWindowTypeDialog, NetClientList, NetWMCheck, NetLast }; /* EWMH atoms */
 enum { WMProtocols, WMDelete, WMState, WMTakeFocus, WMLast }; /* default atoms */
-enum { ClkTagBar, ClkLtSymbol, ClkStatusText, ClkNotifyText, ClkWinTitle,
+enum { ClkTagBar, ClkLtSymbol, ClkStatusText, ClkNotifyText,
        ClkClientWin, ClkRootWin, ClkLast }; /* clicks */
 
 typedef union {
@@ -176,6 +176,17 @@ typedef struct Systray Systray;
 struct Systray {
 	Window win;
 	Client *icons;
+};
+
+typedef struct TabGroup TabGroup;
+struct TabGroup {
+	int x;
+	int n;
+	int i;
+	int active;
+	int start;
+	int end;
+	struct TabGroup * next;
 };
 
 /* function declarations */
@@ -276,6 +287,9 @@ static void zoom(const Arg *arg);
 static void copyvalidchars(char *text, char *rawtext);
 static void drawebar(char *text, Monitor *m, int xpos);
 static void drawtheme(int x, int s, int status, int theme);
+static void drawtabgroups(Monitor *m, int x, int r, int xpos, int passx);
+static void drawtab(Monitor *m, Client *c, int x, int w, int xpos, int tabgroup_active);
+static void drawtaboptionals(Monitor *m, Client *c, int x, int w, int tabgroup_active);
 static void drawtaggrid(Monitor *m, int *x_pos, unsigned int occ);
 static Atom getatomprop(Client *c, Atom prop);
 static int getdwmblockspid();
@@ -619,7 +633,7 @@ buttonpress(XEvent *e)
 			}
 		}
 		if (set == 0 && ev->x > l && ev->x < r)
-			click = ClkWinTitle;
+			drawtabgroups(m, l, m->ww - r, 0, ev->x);
 
 	} else if (ev->window == selmon->ebarwin) {
 		len = sizeof(ebarorder)/sizeof(ebarorder[0]);
@@ -1283,31 +1297,6 @@ int drawltsymbol(Monitor *m, int lr, int p, int xpos) {
 	return lr + blw;
 }
 
-void drawbartab(Monitor *m, int l, int r, int xpos) {
-	int w, x = l;
-	int boxs = drw->fonts->h / 9;
-	int boxw = drw->fonts->h / 6 + 2;
-
-	if ((w = m->ww - l - r) > bh) {
-		if (m->sel) {
-			if (m == selmon)
-				drawtheme(0,0,3,tabbartheme);
-			else
-				drawtheme(0,0,0,0);
-			drw_text(drw, x, 0, w, bh, lrpad / 2, m->sel->name, 0);
-			if (m->sel->isfloating)
-				drw_rect(drw, x + boxs, boxs, boxw, boxw, m->sel->isfixed, 0);
-		} else {
-			drawtheme(0,0,0,0);
-			drw_rect(drw, x, 0, w, bh, 1, 1);
-		}
-	}
-	if (xpos && xpos > x && xpos <= x + w) {
-		fsep = x;
-		fblock = w;
-	}
-}
-
 void
 drawbar(Monitor *m, int xpos)
 {
@@ -1336,7 +1325,7 @@ drawbar(Monitor *m, int xpos)
 		if (strcmp ("seperator", barorder[i]) == 0)
 			lr = drawsep(m, lr, pos, xpos, 1);
 	}
-	drawbartab(m, l, r, xpos);
+	drawtabgroups(m, l, r, xpos, 0);
 	drw_map(drw, m->barwin, 0, 0, m->ww - (bargap ? 2 * m->gappx : 0), bh);
 }
 
@@ -3275,6 +3264,163 @@ drawtheme(int x, int s, int status, int theme) {
 			XSetForeground(drw->dpy, drw->gc, scheme[SchemeSelect][ColBorder].pixel);
 			XFillRectangle(drw->dpy, drw->drawable, drw->gc, x, 0, s - 1, 1);
 			XFillRectangle(drw->dpy, drw->drawable, drw->gc, x, 0, 1, bh - 1);
+		}
+	}
+}
+
+void
+drawtabgroups(Monitor *m, int x, int r, int xpos, int passx)
+{
+	Client *c;
+	TabGroup *tg_head = NULL, *tg, *tg2;
+	int tabwidth, tabx, tabgroupwidth, bw;
+
+	bw = borderpx;
+
+	// Calculate
+	if (NULL != m->lt[m->sellt]->arrange) {
+		for (c = m->clients; c; c = c->next) {
+			if (ISVISIBLE(c) && !c->isfloating && abs(m->ltaxis[0]) != 2 && m->lt[m->sellt]->arrange != monocle) {
+				for (tg = tg_head; tg && tg->x != c->x - m->mx && tg->next; tg = tg->next);
+				if (!tg || (tg && tg->x != c->x - m->mx)) {
+					tg2 = calloc(1, sizeof(TabGroup));
+					tg2->x = c->x - m->mx;
+					tg2->start = tg2->x - (bargap ? selmon->gappx : 0);
+					tg2->end = tg2->start + c->w + 2 * bw;
+					if (tg) { tg->next = tg2; } else { tg_head = tg2; }
+				}
+			}
+		}
+	}
+	if (!tg_head) {
+		tg_head = calloc(1, sizeof(TabGroup));
+		tg_head->end = m->ww;
+	}
+	for (c = m->clients; c; c = c->next) {
+		if (!ISVISIBLE(c) || (c->isfloating)) continue;
+		for (tg = tg_head; tg && tg->x != c->x - m->mx && tg->next; tg = tg->next);
+		if (m->sel == c) { tg->active = True; }
+		tg->n++;
+	}
+	for (tg = tg_head; tg; tg = tg->next) {
+		if ((m->mx + m->ww) - tg->end < BARTABGROUPS_FUZZPX) {
+			tg->end = m->mx + m->ww;
+		} else {
+			for (tg2 = tg_head; tg2; tg2 = tg2->next) {
+				if (tg != tg2 && abs(tg->end - tg2->start) < BARTABGROUPS_FUZZPX) {
+				  tg->end = (tg->end + tg2->start) / 2.0;
+				  tg2->start = tg->end;
+				}
+			}
+		}
+	}
+
+	// Draw
+	drawtheme(0,0,0,0);
+	drw_rect(drw, x, 0, m->ww - r - x, bh, 1, 1);
+
+	for (c = m->clients; c; c = c->next) {
+		if (!ISVISIBLE(c) || (c->isfloating)) continue;
+		for (tg = tg_head; tg && tg->x != c->x - m->mx && tg->next; tg = tg->next);
+		tabgroupwidth = (MIN(tg->end, m->ww - r) - MAX(x, tg->start));
+		tabx = MAX(x, tg->start) + (tabgroupwidth / tg->n * tg->i);
+		tabwidth = tabgroupwidth / tg->n + (tg->n == tg->i + 1 ?  tabgroupwidth % tg->n : 0);
+		drawtab(m, c, tabx, tabwidth, xpos, tg->active);
+		drawtaboptionals(m, c, tabx, tabwidth, tg->active);
+		if (m ->lt[m->sellt]->arrange == tile && abs(m->ltaxis[0]) != 2) {
+			if (passx > 0 && passx > tabx && passx < tabx + tabwidth) {
+				focus(c);
+				restack(selmon);
+			}
+		} else {
+			if (passx > 0
+					&& passx > x + (m->ww - x - r) / tg->n * tg->i
+					&& passx < x + (m->ww - x - r) / tg->n * (tg->i + 1))
+			{
+				focus(c);
+				restack(selmon);
+			}
+		}
+		tg->i++;
+	}
+	while (tg_head != NULL) { tg = tg_head; tg_head = tg_head->next; free(tg); }
+}
+
+void drawtab(Monitor *m, Client *c, int x, int w, int xpos, int tabgroup_active)
+{
+	if (!c) return;
+	int n = 0;
+
+	if (m->ww - (bargap ? 2 * m->gappx : 0) - x - w < BARTABGROUPS_FUZZPX)
+		w = m->ww - (bargap ? 2 * m->gappx : 0) - x;
+
+	if (oneclientdimmer == 1) {
+		Client *s;
+		for(n = 0, s = nexttiled(m->clients); s; s = nexttiled(s->next), n++);
+		if (n == 1) {
+			drawtheme(0,0,0,0);
+			drw_text(drw, x, 0, w, bh, lrpad / 2, c->name, 0);
+		}
+	}
+	if (n != 1) {
+		if (xpos && xpos > x && xpos <= x + w) {
+			fsep = x;
+			fblock = w;
+		}
+		if (m->sel == c)
+			drawtheme(0,0,3,tabbartheme);
+		else if (x == fsep && w == fblock && w)
+			drawtheme(0,0,2,tabbartheme);
+		else
+			drawtheme(0,0,1,tabbartheme);
+		drw_text(drw, x, (bartheme && tabbartheme && m->sel != c) ? x != fsep || w != fblock ? -1 : 0 : 0, w, bh, lrpad / 2, c->name, 0);
+		if (bartheme) {
+			if(m->sel == c)
+				drawtheme(x, w, 3, tabbartheme);
+			else if (x != fsep || w != fblock)
+				drawtheme(x, w, 1, tabbartheme);
+			else
+				drawtheme(x, w, 2, tabbartheme);
+		} else {
+			XSetForeground(drw->dpy, drw->gc, scheme[SchemeBar][ColBg].pixel);
+			XFillRectangle(drw->dpy, drw->drawable, drw->gc, x - (m->sel == c ? 1 : 0), 0, 1, bh);
+		}
+	}
+}
+
+void drawtaboptionals(Monitor *m, Client *c, int x, int w, int tabgroup_active)
+{
+	int i, draw_grid, nclienttags, nviewtags;
+
+	if (!c) return;
+
+	// Tag Grid indicators
+	draw_grid = BARTABGROUPS_TAGSINDICATOR;
+	if (BARTABGROUPS_TAGSINDICATOR == 1) {
+		nclienttags = 0;
+		nviewtags = 0;
+		for (i = 0; i < LENGTH(tags); i++) {
+			if ((m->tagset[m->seltags] >> i) & 1) { nviewtags++; }
+			if ((c->tags >> i) & 1) { nclienttags++; }
+		}
+		draw_grid = nclienttags > 1 || nviewtags > 1;
+	}
+	if (draw_grid) {
+		for (i = 0; i < LENGTH(tags); i++) {
+			drw_rect(drw, (
+					x + w
+					- BARTABGROUPS_INDICATORSPADPX
+					- ((LENGTH(tags) / BARTABGROUPS_TAGSROWS) * BARTABGROUPS_TAGSPX)
+					- (i % (LENGTH(tags)/BARTABGROUPS_TAGSROWS))
+					+ ((i % (LENGTH(tags) / BARTABGROUPS_TAGSROWS)) * BARTABGROUPS_TAGSPX)
+				),
+				(
+					BARTABGROUPS_INDICATORSPADPX
+					+ ((i / (LENGTH(tags)/BARTABGROUPS_TAGSROWS)) * BARTABGROUPS_TAGSPX)
+					- ((i / (LENGTH(tags)/BARTABGROUPS_TAGSROWS)))
+				),
+				BARTABGROUPS_TAGSPX, BARTABGROUPS_TAGSPX, (c->tags >> i) & 1, 0
+			);
 		}
 	}
 }

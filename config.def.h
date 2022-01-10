@@ -8,6 +8,13 @@
 /* See LICENSE file for copyright and license details. */
 
 
+/* bartabgroups */
+#define BARTABGROUPS_FUZZPX				 5		/* pixels cutoff between bartab groups to merge (e.g. max gaps px) */
+#define BARTABGROUPS_TAGSINDICATOR		 1		/* 0 = disable, 1 = enable when >1 client or view tag, 2 = enable always */
+#define BARTABGROUPS_TAGSPX				 5		/* pixels for tag grid boxes */
+#define BARTABGROUPS_TAGSROWS			 2		/* rows in tag grid */
+#define BARTABGROUPS_INDICATORSPADPX	 2		/* pixels from l/r to pad tags indicators */
+
 /* grid of tags */
 #define DRAWCLASSICTAGS				1 << 0
 #define DRAWTAGGRID					1 << 1
@@ -61,6 +68,7 @@ static const int bargap				= 1;		/* bar padding on/off */
 static const int borderpx			= 1;		/* border pixel of windows */
 static const int gappx				= 4;		/* gaps between windows */
 static const int istatustimeout		= 5;		/* max timeout before displaying regular status after istatus */
+static const int oneclientdimmer	= 1;		/* 1 makes tab for one client in unfocused color... */
 static const int snap				= 32;		/* snap pixel */
 static const int showbar			= 1;		/* 0 means no bar */
 static const int showebar           = 1;        /* 0 means no extra bar */
@@ -237,12 +245,11 @@ static Key keys[] = {
 
 
 /* button definitions */
-/* click can be ClkTagBar, ClkLtSymbol, ClkStatusText, ClkWinTitle, ClkClientWin, or ClkRootWin */
+/* click can be ClkTagBar, ClkLtSymbol, ClkStatusText, ClkClientWin, or ClkRootWin */
 static Button buttons[] = {
 	/* click				event mask		button			function			argument */
 	{ ClkLtSymbol,			0,				Button1,		setlayout,			{0} },
 	{ ClkLtSymbol,			0,				Button3,		setlayout,			{.v = &layouts[2]} },
-	{ ClkWinTitle,			0,				Button2,		zoom,				{0} },
 	{ ClkStatusText,		0,				Button1,		sigdwmblocks,		{.i = 1 } },
 	{ ClkStatusText,		0,				Button2,		sigdwmblocks,		{.i = 2 } },
 	{ ClkStatusText,		0,				Button3,		sigdwmblocks,		{.i = 3 } },
