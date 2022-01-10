@@ -419,12 +419,18 @@ attachstack(Client *c)
 
 /* buttonpress-functions */
 
-int buttontag(int x, int xpos, int click, Arg *arg) {
-	unsigned int i = 0;
+int buttontag(Monitor *m, int x, int xpos, int click, Arg *arg) {
+	Client *c;
+	unsigned int i = 0, occ = 0;
 
-	do
+	for (c = m->clients; c; c = c->next)
+		occ |= c->tags == 255 ? 0 : c->tags;
+	do {
+		/* do not reserve space for vacant tags */
+		if (!(occ & 1 << i || m->tagset[m->seltags] & 1 << i))
+			continue;
 		x += TEXTW(tags[i]);
-	while (xpos > x && ++i < LENGTH(tags));
+	} while (xpos > x && ++i < LENGTH(tags));
 	if(i < LENGTH(tags)) {
 		click = ClkTagBar;
 		arg->ui = 1 << i;
@@ -458,7 +464,7 @@ buttonpress(XEvent *e)
 				else {r = lr; break;}
 			}
 			if (strcmp ("tagbar", barorder[i]) == 0) {
-				if (pos * ev->x < pos * (lr + pos * tgw)) {click = buttontag(lr - (pos < 0 ? tgw : 0), ev->x, click, &arg); set = 1; }
+				if (pos * ev->x < pos * (lr + pos * tgw)) {click = buttontag(m, lr - (pos < 0 ? tgw : 0), ev->x, click, &arg); set = 1; }
 				else lr = lr + pos * tgw;
 			} else if (strcmp ("ltsymbol", barorder[i]) == 0) {
 				if (pos * ev->x < pos * (lr + pos * blw)) { click = ClkLtSymbol; set = 1; }
@@ -766,17 +772,18 @@ int drawsep(Monitor *m, int lr, int p, int xpos, int s) {
 int drawtag(Monitor *m, int lr, int p, int xpos) {
 	tgw = lr;
 	int i, x, w = 0;
-	int boxs = drw->fonts->h / 9;
-	int boxw = drw->fonts->h / 6 + 2;
 	unsigned int occ = 0, urg = 0;
 	Client *c;
 
 	for (c = m->clients; c; c = c->next) {
-		occ |= c->tags;
+		occ |= c->tags == 255 ? 0 : c->tags;
 		if (c->isurgent)
 			urg |= c->tags;
 	}
 	for (i = p ? LENGTH(tags) - 1 : 0; p ? i >= 0 : i < LENGTH(tags); p ? i-- : i++) {
+		/* do not draw vacant tags */
+		if (!(occ & 1 << i || m->tagset[m->seltags] & 1 << i))
+			continue;
 		w = TEXTW(tags[i]);
 		x = p ? m->ww - lr - w : lr;
 
@@ -791,10 +798,6 @@ int drawtag(Monitor *m, int lr, int p, int xpos) {
 		else
 			drw_setscheme(drw, scheme[SchemeBar]);
 		drw_text(drw, x, 0, w, bh, lrpad / 2, tags[i], urg & 1 << i);
-		if (occ & 1 << i)
-			drw_rect(drw, x + boxs, boxs, boxw, boxw,
-				m == selmon && selmon->sel && selmon->sel->tags & 1 << i,
-				urg & 1 << i);
 		lr = lr + w;
 	}
 	tgw = lr - tgw;
