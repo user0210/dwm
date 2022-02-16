@@ -239,9 +239,9 @@ static void zoom(const Arg *arg);
 static const char broken[] = "broken";
 static char stext[256];
 static int screen;
-static int sw, sh;           /* X display screen geometry width, height */
-static int bh, blw = 0;      /* bar geometry */
-static int lrpad;            /* sum of left and right padding for text */
+static int sw, sh;								/* X display screen geometry width, height */
+static int bh, blw, tgw, saw, sep, gap;			/* bar geometry */
+static int lrpad;								/* sum of left and right padding for text */
 static int (*xerrorxlib)(Display *, XErrorEvent *);
 static unsigned int numlockmask = 0;
 static void (*handler[LASTEvent]) (XEvent *) = {
@@ -414,35 +414,67 @@ attachstack(Client *c)
 	c->mon->stack = c;
 }
 
+/* buttonpress-functions */
+
+int buttontag(int x, int xpos, int click, Arg *arg) {
+	unsigned int i = 0;
+
+	do
+		x += TEXTW(tags[i]);
+	while (xpos >= x && ++i < LENGTH(tags));
+	if(i < LENGTH(tags)) {
+		click = ClkTagBar;
+		arg->ui = 1 << i;
+	}
+	return click;
+}
+
 void
 buttonpress(XEvent *e)
 {
-	unsigned int i, x, click;
 	Arg arg = {0};
 	Client *c;
 	Monitor *m;
 	XButtonPressedEvent *ev = &e->xbutton;
 
-	click = ClkRootWin;
 	/* focus monitor if necessary */
 	if ((m = wintomon(ev->window)) && m != selmon) {
 		unfocus(selmon->sel, 1);
 		selmon = m;
 		focus(NULL);
 	}
+	int len, i, lr = 0, l = 0, r = m->ww, set = 0, pos = 1;
+	int click = ClkRootWin;
+
 	if (ev->window == selmon->barwin) {
-		i = x = 0;
-		do
-			x += TEXTW(tags[i]);
-		while (ev->x >= x && ++i < LENGTH(tags));
-		if (i < LENGTH(tags)) {
-			click = ClkTagBar;
-			arg.ui = 1 << i;
-		} else if (ev->x < x + blw)
-			click = ClkLtSymbol;
-		else if (ev->x > selmon->ww - (int)TEXTW(stext))
-			click = ClkStatusText;
-		else
+		len = sizeof(barorder)/sizeof(barorder[0]);
+
+		for (i = 0; set == 0 && i < len && i >= 0; pos == 1 ? i++ : i--) {
+			if (strcmp ("bartab", barorder[i]) == 0) {
+				if (pos == 1) {pos = -1; i = len - 1; l = lr; lr = r; }
+				else {r = lr; break;}
+			}
+			if (strcmp ("tagbar", barorder[i]) == 0) {
+				if (pos * ev->x < pos * (lr + pos * tgw)) {click = buttontag(lr - (pos < 0 ? tgw : 0), ev->x, click, &arg); set = 1; }
+				else lr = lr + pos * tgw;
+			} else if (strcmp ("ltsymbol", barorder[i]) == 0) {
+				if (pos * ev->x < pos * (lr + pos * blw)) { click = ClkLtSymbol; set = 1; }
+				else lr = lr + pos * blw;
+			} else if (strcmp ("status", barorder[i]) == 0) {
+				if (pos * ev->x < pos * (lr + pos * saw)) { click = ClkStatusText; set = 1; }
+				else lr = lr + pos * saw;
+			} else if (strcmp ("seperator", barorder[i]) == 0) {
+				if (pos * ev->x < pos * (lr + pos * sep)) return;
+				else lr = lr + pos * sep;
+			} else if (strcmp ("gap", barorder[i]) == 0) {
+				if (pos * ev->x < pos * (lr + pos * gap)) return;
+				else lr = lr + pos * gap;
+			} else if (strcmp ("sepgap", barorder[i]) == 0) {
+				if (pos * ev->x < pos * (lr + pos * gap)) return;
+				else lr = lr + pos * gap;
+			}
+		}
+		if (set == 0 && ev->x > l && ev->x < r)
 			click = ClkWinTitle;
 	} else if ((c = wintoclient(ev->window))) {
 		focus(c);
@@ -694,46 +726,91 @@ dirtomon(int dir)
 	return m;
 }
 
-void
-drawbar(Monitor *m)
-{
-	int x, w, tw = 0;
+/* drawbar-functions */
+
+int drawsep(Monitor *m, int lr, int p, int s) {
+	int len, sp, dot = 0;
+
+	dot = seppad < 0 ? 1 : 0;
+	sp = dot ? (seppad < -lrpad/2 ? lrpad/2 : -seppad) : (seppad > bh/2 ? bh/2 : seppad);
+
+	if (s < 2)
+		len = sep = dot ? sp : 1;
+	else
+		len = gap = lrpad/2 + (s == 3 ? dot ? sp : 1 : 0);
+
+	int x = p ? m->ww - len - lr : lr;
+
+	if (s) {
+		XSetForeground(drw->dpy, drw->gc, scheme[SchemeBar][ColBg].pixel);
+		XFillRectangle(drw->dpy, drw->drawable, drw->gc, x, 0, len, bh);
+	}
+	XSetForeground(drw->dpy, drw->gc, scheme[SchemeBar][ColFloat].pixel);
+	if (s != 2) {
+		if (dot)
+			XFillRectangle(drw->dpy, drw->drawable, drw->gc, x + (s == 3 ? lrpad/4 : s == 0 ? -sp/2 : 0), bh/2 - sp/2, sp, sp);
+		else
+			XFillRectangle(drw->dpy, drw->drawable, drw->gc, x + (s == 3 ? lrpad/4 : s == 0 ? -sp/2 : 0), sp, 1, bh - 2 * sp);
+	}
+
+	return lr + len;
+}
+
+int drawtag(Monitor *m, int lr, int p) {
+	tgw = lr;
+	int i, x, w = 0;
 	int boxs = drw->fonts->h / 9;
 	int boxw = drw->fonts->h / 6 + 2;
-	unsigned int i, occ = 0, urg = 0;
+	unsigned int occ = 0, urg = 0;
 	Client *c;
-
-	if (!m->showbar)
-		return;
-
-	/* draw status first so it can be overdrawn by tags later */
-	if (m == selmon) { /* status is only drawn on selected monitor */
-		drw_setscheme(drw, scheme[SchemeBar]);
-		tw = TEXTW(stext) - lrpad + 2; /* 2px right padding */
-		drw_text(drw, m->ww - tw, 0, tw, bh, 0, stext, 0);
-	}
 
 	for (c = m->clients; c; c = c->next) {
 		occ |= c->tags;
 		if (c->isurgent)
 			urg |= c->tags;
 	}
-	x = 0;
-	for (i = 0; i < LENGTH(tags); i++) {
+	for (i = p ? LENGTH(tags) - 1 : 0; p ? i >= 0 : i < LENGTH(tags); p ? i-- : i++) {
 		w = TEXTW(tags[i]);
+		x = p ? m->ww - lr - w : lr;
 		drw_setscheme(drw, scheme[m->tagset[m->seltags] & 1 << i ? SchemeSelect : SchemeBar]);
 		drw_text(drw, x, 0, w, bh, lrpad / 2, tags[i], urg & 1 << i);
 		if (occ & 1 << i)
 			drw_rect(drw, x + boxs, boxs, boxw, boxw,
 				m == selmon && selmon->sel && selmon->sel->tags & 1 << i,
 				urg & 1 << i);
-		x += w;
+		lr = lr + w;
 	}
-	w = blw = TEXTW(m->ltsymbol);
-	drw_setscheme(drw, scheme[SchemeBar]);
-	x = drw_text(drw, x, 0, w, bh, lrpad / 2, m->ltsymbol, 0);
+	tgw = lr - tgw;
+	return lr;
+}
 
-	if ((w = m->ww - tw - x) > bh) {
+int drawstatus(char* stext, Monitor *m, int lr, int p) {
+	saw = TEXTW(stext) - lrpad + 2; /* 2px right padding */
+	int x = p ? m->ww - saw - lr : lr;
+
+	if (m == selmon) { /* status is only drawn on selected monitor */
+		drw_setscheme(drw, scheme[SchemeBar]);
+		drw_text(drw, x, 0, saw, bh, 0, stext, 0);
+	}
+	return lr + saw;
+}
+
+int drawltsymbol(Monitor *m, int lr, int p) {
+	blw = TEXTW(m->ltsymbol);
+	int x = p ? m->ww - blw - lr : lr;
+
+	drw_setscheme(drw, scheme[SchemeBar]);
+	drw_text(drw, x, 0, blw, bh, lrpad / 2, m->ltsymbol, 0);
+
+	return lr + blw;
+}
+
+void drawbartab(Monitor *m, int l, int r) {
+	int w, x = l;
+	int boxs = drw->fonts->h / 9;
+	int boxw = drw->fonts->h / 6 + 2;
+
+	if ((w = m->ww - l - r) > bh) {
 		if (m->sel) {
 			drw_setscheme(drw, scheme[m == selmon ? SchemeSelect : SchemeBar]);
 			drw_text(drw, x, 0, w, bh, lrpad / 2, m->sel->name, 0);
@@ -744,6 +821,37 @@ drawbar(Monitor *m)
 			drw_rect(drw, x, 0, w, bh, 1, 1);
 		}
 	}
+}
+
+void
+drawbar(Monitor *m)
+{
+	int i, len, l = 0, r = 0, lr = 0, pos = 0;
+
+	len = sizeof(barorder)/sizeof(barorder[0]);
+
+	if (!m->showbar)
+		return;
+
+	for (i = 0; i < len && i >= 0; pos == 1 ? i-- : i++) {
+		if (strcmp ("bartab", barorder[i]) == 0) {
+			if (pos == 0) {pos = 1; i = len - 1; l = lr; lr = 0; }
+			else {r = lr; break;}
+		}
+		if (strcmp ("status", barorder[i]) == 0)
+			lr = drawstatus(stext, m, lr, pos);
+		if (strcmp ("tagbar", barorder[i]) == 0)
+			lr = drawtag(m, lr, pos);
+		if (strcmp ("ltsymbol", barorder[i]) == 0)
+			lr = drawltsymbol(m, lr, pos);
+		if (strcmp ("sepgap", barorder[i]) == 0)
+			lr = drawsep(m, lr, pos, 3);
+		if (strcmp ("gap", barorder[i]) == 0)
+			lr = drawsep(m, lr, pos, 2);
+		if (strcmp ("seperator", barorder[i]) == 0)
+			lr = drawsep(m, lr, pos, 1);
+	}
+	drawbartab(m, l, r);
 	drw_map(drw, m->barwin, 0, 0, m->ww, bh);
 }
 

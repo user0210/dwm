@@ -13,6 +13,17 @@ static const char *tags[] = { "1", "2", "3", "4", "5", "6", "7", "8", "9" };
 
 
 /* appearance */
+static const int seppad 			= 5;		/* top and bottom padding of seperator (if "> bh" = dot or "< 0" dotradius) */
+static const char *barorder[]		= {
+//	"sepgap",									/*	[|]	*/
+//	"gap",										/*	[ ]	*/
+//	"seperator",								/*	 |	*/
+	"tagbar",
+	"ltsymbol",
+	"bartab",
+	"status",
+""};
+
 static const char dmenufont[]		= "monospace:pixelsize=16";
 static const char *fonts[]			= { dmenufont };
 
