@@ -145,6 +145,7 @@ struct Client {
 	int oldx, oldy, oldw, oldh;
 	int basew, baseh, incw, inch, maxw, maxh, minw, minh;
 	int bw, oldbw;
+	int hidden;
 	int floatborderpx;
 	unsigned int tags;
 	unsigned int switchtag;
@@ -2809,6 +2810,7 @@ tile(Monitor *m)
 	bw = (borderswitch == 1 && m->gappx > tileswitch) ? 0 : borderpx;
 
 	for (n = 0, c = nexttiled(m->clients); c; c = nexttiled(c->next), n++) {
+		c->hidden = 0;
 		if (n < m->nmaster)
 			mfacts += c->cfact;
 		else
@@ -2907,6 +2909,7 @@ tile(Monitor *m)
 	if(m->ltaxis[1] == 3) {
 		for(i = 0, o = d = nexttiled(m->clients); i < m->nmaster; o = d = nexttiled(d->next), i++) {
 			XMoveWindow(dpy, d->win, WIDTH(d) * -2, d->y);
+			d->hidden = 1;
 		}
 		for (t = m->stack; t; t = t->snext) {
 			if (!ISVISIBLE(t) || t->isfloating)
@@ -2915,6 +2918,7 @@ tile(Monitor *m)
 			if (i >= m->nmaster)
 				continue;
 			XMoveWindow(dpy, t->win, x1, y1);
+			d->hidden = 0;
 //			resize(t, x1, y1, w1 - 2 * bw - m->gappx, h1 - 2 * bw - m->gappx, bw, 0);
 			break;
 		}
@@ -2935,8 +2939,10 @@ tile(Monitor *m)
 					y2 = c->y + HEIGHT(c) + m->gappx;
 			}
 		if(m->ltaxis[2] == 3) {
-			for(i = 0, c = o; c; c = nexttiled(c->next), i++)
+			for(i = 0, c = o; c; c = nexttiled(c->next), i++) {
 				XMoveWindow(dpy, c->win, WIDTH(c) * -2, c->y);
+				c->hidden = 1;
+			}
 			for (s = m->stack; s; s = s->snext) {
 				if (!ISVISIBLE(s) || s->isfloating)
 					continue;
@@ -2945,6 +2951,7 @@ tile(Monitor *m)
 					continue;
 				resize(c, x2, y2, w2 - 2 * bw - m->gappx, h2 - 2 * bw - m->gappx, bw, 0);
 				XMoveWindow(dpy, c->win, x2, y2);
+				c->hidden = 0;
 				break;
 			}
 		}
@@ -4222,7 +4229,7 @@ focusdir(const Arg *arg)
 		next = c->next;
 		if (!next)
 			next = s->mon->clients;
-		if (!ISVISIBLE(c) || c->isfloating != isfloating) // || HIDDEN(c)
+		if (!ISVISIBLE(c) || c->isfloating != isfloating || (abs(selmon->ltaxis[0] * selmon->ltaxis[0] - arg->i - 1) <= 1 && c->hidden)) // || HIDDEN(c)
 			continue;
 		switch (arg->i) {
 		case 0: // left
@@ -4748,7 +4755,7 @@ placedir(const Arg *arg)
 		next = c->next;
 		if (!next)
 			next = s->mon->clients;
-		if (!ISVISIBLE(c)) // || HIDDEN(c)
+		if (!ISVISIBLE(c) || (abs(selmon->ltaxis[0] * selmon->ltaxis[0] - arg->i - 1) <= 1 && c->hidden)) // || HIDDEN(c)
 			continue;
 		switch (arg->i) {
 		case 0: // left
