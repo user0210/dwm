@@ -5664,7 +5664,7 @@ togglescratch(const Arg *arg)
 	}
 	if (found) {
 		focus(ISVISIBLE(found) ? found : NULL);
-		arrange(NULL);
+		arrange(selmon);
 		if (found->isfloating)
 			XRaiseWindow(dpy, found->win);
 	} else {
