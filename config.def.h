@@ -63,6 +63,8 @@ static const char dmenufont[]		= "monospace:pixelsize=16";
 static const char *fonts[]			= { dmenufont };
 static const char istatusprefix[]	= "msg: ";			/* prefix for important status messages */
 static const char istatusclose[]	= "msg:close";		/* prefix to close messages */
+static const char slopspawnstyle[]	= "-t 0 -l -c 0.92,0.85,0.69,0.3 -o";	/* do NOT define -f (format) here */
+static const char slopresizestyle[]	= "-t 0 -l -c 0.92,0.85,0.69,0.3 -o";	/* do NOT define -f (format) here */
 
 static const int attachdirection	= 2;		/* 0 default, 1 above, 2 aside, 3 below, 4 bottom, 5 top */
 static const int bargap				= 1;		/* bar padding on/off */
@@ -73,11 +75,15 @@ static const int iconpad			= 1;		/* icon padding to barborders */
 static const int iconspacing		= 5;		/* space between icon and title */
 static const int istatustimeout		= 5;		/* max timeout before displaying regular status after istatus */
 static const int oneclientdimmer	= 1;		/* 1 makes tab for one client in unfocused color... */
+static const int riodraw_borders	= 0;        /* 0 or 1, indicates whether the area drawn using slop includes the window borders */
+static const int riodraw_matchpid	= 1;        /* 0 or 1, indicates whether to match the PID of the client that was spawned with riospawn */
+static const int riodraw_spawnasync	= 0;        /* 0 spawned after selection, 1 application initialised in background while selection is made */
 static const int scalepreview		= 4;		/* Tag preview scaling */
 static const int snap				= 32;		/* snap pixel */
 static const int showbar			= 1;		/* 0 means no bar */
 static const int showebar           = 1;        /* 0 means no extra bar */
 static const int statuscenter		= 0;		/* center status elements */
+static const int swallowfloating	= 1;		/* 1 means swallow floating windows by default */
 static const int systraypinning 	= 0;		/* 0: sloppy systray follows selected monitor, >0: pin systray to monitor X */
 static const int systrayspacing 	= 2;		/* systray spacing */
 static const int systraypinningfailfirst = 1;	/* 1: if pinning fails, display systray on the first monitor, False: display systray on the last monitor*/
@@ -159,9 +165,11 @@ static const Rule rules[] = {
 	 *	WM_NAME(STRING)		= title
 	 *	switchtag			= 0 default, 1 switch to tag, 2 add application-tag, 3 as (1) and revert, 4 as (2) and revert
 	 */
-	/* class			instance		title		tags mask	switchtag	isfloating	monitor */
-	{ "Gimp",			NULL,			NULL,		0,			1,			1,			-1 },
-	{ "Firefox",		NULL,			NULL,		1 << 8,		1,			0,			-1 },
+	/* class			instance		title		tags mask	switchtag	isfloating	isterminal	noswallow	monitor */
+	{ "Gimp",			NULL,			NULL,		0,			1,			1,			0,			0,			-1 },
+	{ "Firefox",		NULL,			NULL,		1 << 8,		1,			0,			0,			-1,			-1 },
+	{ "st",				NULL,			NULL,		0,			0,			0,			1,			-1,			-1 },
+	{ NULL,				NULL,	"Event Tester",		0,			0,			1,			0,			1,			-1 },	/* xev */
 };
 
 
@@ -194,6 +202,8 @@ static Key keys[] = {
 	{ MODKEY|ControlMask|ShiftMask,	XK_Return,			spawn,					SHCMD(notifymenu) },
 	{ MODKEY,						XK_Return,			spawn,					{.v = dmenucmd } },
 	{ MODKEY|ShiftMask,				XK_Return,			spawn,					{.v = termcmd } },
+	{ MODKEY|ControlMask,			XK_s,				riospawn,				{.v = termcmd } },
+	{ MODKEY,						XK_s,				rioresize,				{0} },
 	{ MODKEY,						XK_b,				togglebars,				{0} },
 	{ MODKEY|ControlMask,			XK_b,				togglebar,				{0} },
 	{ MODKEY|ControlMask|ShiftMask,	XK_b,				toggleebar,				{0} },
