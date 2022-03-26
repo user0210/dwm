@@ -24,14 +24,21 @@ static const int topbar				= 1;		/* 0 means bottom bar */
 static const char bar_fg[]			= "#bbbbbb";
 static const char bar_bg[]			= "#222222";
 static const char bar_brd[]			= "#444444";
+static const char bar_flo[]			= "#444444";
 static const char sel_fg[]			= "#eeeeee";
 static const char sel_bg[]			= "#005577";
 static const char sel_brd[]			= "#005577";
+static const char sel_flo[]			= "#bbbbbb";
+static const char brd_fg[]			= "#eeeeee";
+static const char brd_bg[]			= "#222222";
+static const char brd_brd[]			= "#444444";
+static const char brd_flo[]			= "#444444";
 
-static const char *colors[][3]		= {
-	/*					fg			bg			border   */
-	[SchemeBar]		= { bar_fg,		bar_bg,		bar_brd },
-	[SchemeSelect]	= { sel_fg,		sel_bg,		sel_brd },
+static const char *colors[][4]		= {
+	/*					fg			bg			border		float   */
+	[SchemeBar]		= { bar_fg,		bar_bg,		bar_brd,	bar_flo	},
+	[SchemeSelect]	= { sel_fg,		sel_bg,		sel_brd,	sel_flo	},
+	[SchemeBorder]	= { brd_fg,		brd_bg,		brd_brd,	brd_flo },
 };
 
 
