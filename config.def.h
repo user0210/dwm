@@ -38,7 +38,6 @@ static const char *tags[] = { "1", "2", "3", "4", "5", "6" };
 static const int seppad 			= 5;		/* top and bottom padding of seperator (if "> bh" = dot or "< 0" dotradius) */
 static const int statussep			= 1;		/* 0 = off, 1 = on, 2 = hide on focus */
 static const int tabbarsep			= 2;		/* 0 = off, 1 = on, 2 = hide on focus */
-static const int themebar			= 1;		/* 0 = off, 1 = on */
 static const int statustheme		= 2;		/* 0 = classic, 1 = button-theme, 2 = float-theme */
 static const int tabbartheme		= 2;		/* 0 = classic, 1 = button-theme, 2 = float-theme */
 static const int tagtheme			= 0;		/* 0 = classic, 1 = button-theme, 2 = float-theme */
