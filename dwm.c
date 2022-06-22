@@ -461,6 +461,7 @@ static int istatustimer = 0;
 unsigned int xstat = 0;
 
 static int bartheme;
+unsigned int barhight;
 
 /* configuration, allows nested code to access above variables */
 #include "config.h"
@@ -770,7 +771,43 @@ buttonpress(XEvent *e)
 	int len, i, lr = 0, l = 0, r = m->ww - (bargap ? 2 * m->gappx : 0), set = 0, pos = 1;
 	int click = ClkRootWin;
 
-	if (ev->window == selmon->barwin && (ev->y > bh || !selmon->showebar)) { 	// why is "by" already in "ev->y" ???
+	if (ev->window == selmon->barwin
+				&& (ev->y > barborder && ev->y < bh + barborder && selmon->showebar)) {
+		len = sizeof(ebarorder)/sizeof(ebarorder[0]);
+		for (i = 0; set == 0 && i < len && i >= 0; pos == 1 ? i++ : i--) {
+			if (strcmp ("status", ebarorder[i]) == 0) {
+				if (pos == 1) {pos = -1; i = len - 1; l = lr; lr = r; }
+				else {r = lr; break;}
+			}
+			if (strcmp ("tagbar", ebarorder[i]) == 0) {
+				XUnmapWindow(dpy, m->tagwin);
+				arrange(selmon);
+				usleep(50000);
+				if (pos * ev->x < pos * (lr + pos * tgw)) {click = buttontag(m, lr - (pos < 0 ? tgw : 0), ev->x, ev->y, click, &arg); set = 1; }
+				else lr = lr + pos * tgw;
+			} else if (strcmp ("ltsymbol", ebarorder[i]) == 0) {
+				if (pos * ev->x < pos * (lr + pos * blw)) { click = ClkLtSymbol; set = 1; }
+				else lr = lr + pos * blw;
+			} else if (strcmp ("systray", ebarorder[i]) == 0) {
+				if (pos * ev->x < pos * (lr + pos * stw)) return;
+				else lr = lr + pos * stw;
+			} else if (strcmp ("seperator", ebarorder[i]) == 0) {
+				if (pos * ev->x < pos * (lr + pos * sep)) return;
+				else lr = lr + pos * sep;
+			} else if (strcmp ("gap", ebarorder[i]) == 0) {
+				if (pos * ev->x < pos * (lr + pos * gap)) return;
+				else lr = lr + pos * gap;
+			} else if (strcmp ("sepgap", ebarorder[i]) == 0) {
+				if (pos * ev->x < pos * (lr + pos * gap)) return;
+				else lr = lr + pos * gap;
+			}
+		}
+		if (set == 0 && ev->x > l && ev->x < r)
+			click = buttonstatus(l, ev->x, click);
+
+	} else if (ev->window == selmon->barwin
+					&& ((ev->y > barhight - bh - barborder && ev->y < barhight - barborder && selmon->showebar)
+						|| (ev->y > barborder && ev->y < barborder + bh && !selmon->showebar))) { 	// why is "by" already in "ev->y" ???
 		len = sizeof(barorder)/sizeof(barorder[0]);
 
 		for (i = 0; set == 0 && i < len && i >= 0; pos == 1 ? i++ : i--) {
@@ -803,39 +840,6 @@ buttonpress(XEvent *e)
 		}
 		if (set == 0 && ev->x > l && ev->x < r)
 			drawtabgroups(m, l, m->ww - r, 0, ev->x, m->showebar ? bh : 0);
-
-	} else if (ev->window == selmon->barwin) {
-		len = sizeof(ebarorder)/sizeof(ebarorder[0]);
-		for (i = 0; set == 0 && i < len && i >= 0; pos == 1 ? i++ : i--) {
-			if (strcmp ("status", ebarorder[i]) == 0) {
-				if (pos == 1) {pos = -1; i = len - 1; l = lr; lr = r; }
-				else {r = lr; break;}
-			}
-			if (strcmp ("tagbar", ebarorder[i]) == 0) {
-				XUnmapWindow(dpy, m->tagwin);
-				arrange(selmon);
-				usleep(50000);
-				if (pos * ev->x < pos * (lr + pos * tgw)) {click = buttontag(m, lr - (pos < 0 ? tgw : 0), ev->x, ev->y, click, &arg); set = 1; }
-				else lr = lr + pos * tgw;
-			} else if (strcmp ("ltsymbol", ebarorder[i]) == 0) {
-				if (pos * ev->x < pos * (lr + pos * blw)) { click = ClkLtSymbol; set = 1; }
-				else lr = lr + pos * blw;
-			} else if (strcmp ("systray", ebarorder[i]) == 0) {
-				if (pos * ev->x < pos * (lr + pos * stw)) return;
-				else lr = lr + pos * stw;
-			} else if (strcmp ("seperator", ebarorder[i]) == 0) {
-				if (pos * ev->x < pos * (lr + pos * sep)) return;
-				else lr = lr + pos * sep;
-			} else if (strcmp ("gap", ebarorder[i]) == 0) {
-				if (pos * ev->x < pos * (lr + pos * gap)) return;
-				else lr = lr + pos * gap;
-			} else if (strcmp ("sepgap", ebarorder[i]) == 0) {
-				if (pos * ev->x < pos * (lr + pos * gap)) return;
-				else lr = lr + pos * gap;
-			}
-		}
-		if (set == 0 && ev->x > l && ev->x < r)
-			click = buttonstatus(l, ev->x, click);
 
 	} else if ((c = wintoclient(ev->window))) {
 		focus(c);
@@ -1013,7 +1017,6 @@ configurenotify(XEvent *e)
 	Client *c;
 	XConfigureEvent *ev = &e->xconfigure;
 	int dirty;
-	int bar = abs(selmon->showbar) + abs(selmon->showebar);
 
 	/* TODO: updategeom handling sucks, needs to be simplified */
 	if (ev->window == root) {
@@ -1027,7 +1030,7 @@ configurenotify(XEvent *e)
 				for (c = m->clients; c; c = c->next)
 					if (c->isfullscreen && c->fakefullscreen != 1)
 						resizeclient(c, m->mx, m->my, m->mw, m->mh, 0);
-				XMoveResizeWindow(dpy, m->barwin, m->wx + (bargap ? m->gappx : 0), m->by, m->ww - (bargap ? 2 * m->gappx : 0), bar == 2 ? 2 * bh : bh);
+				XMoveResizeWindow(dpy, m->barwin, m->wx + (bargap ? m->gappx : 0), m->by, m->ww - (bargap ? 2 * m->gappx : 0), barhight);
 			}
 			focus(NULL);
 			arrange(NULL);
@@ -1190,21 +1193,25 @@ dirtomon(int dir)
 /* drawbar-functions */
 
 void drawbarborder(Monitor *m) {
-	if (fbar && m->gappx > tileswitch  && barborder < 0)
-		XSetForeground(drw->dpy, drw->gc, scheme[SchemeBorder][ColFg].pixel);
-	else if (barborder)
-		XSetForeground(drw->dpy, drw->gc, scheme[SchemeBar][ColBorder].pixel);
-	else
-		XSetForeground(drw->dpy, drw->gc, scheme[SchemeBar][bartheme ? ColBg : ColFloat].pixel);
+//	if (fbar && m->gappx > tileswitch  && barborder < 0)
+//		XSetForeground(drw->dpy, drw->gc, scheme[SchemeBorder][ColFg].pixel);
+//	else if (barborder)
+//		XSetForeground(drw->dpy, drw->gc, scheme[SchemeBar][ColBorder].pixel);
+//	else
+//		XSetForeground(drw->dpy, drw->gc, scheme[SchemeBar][bartheme ? ColBg : ColFloat].pixel);
+//
+//	if ((barborder && bargap && m->gappx != 0) || m->gappx == 0)
+//		XFillRectangle(drw->dpy, drw->drawable, drw->gc, 0, 2 * bh - 1, m->ww - (bargap ? 2 * m->gappx : 0), 1);
+//	if (barborder && bargap && m->gappx != 0) {
+//		XFillRectangle(drw->dpy, drw->drawable, drw->gc, 0, 0, 1, 2 * bh);
+//		XFillRectangle(drw->dpy, drw->drawable, drw->gc, 0, 0, m->ww - (bargap ? 2 * m->gappx : 0), 1);
+//		XFillRectangle(drw->dpy, drw->drawable, drw->gc, m->ww - 1 - (bargap ? 2 * m->gappx : 0), 0, 1, 2 * bh);
+//	}
+//	drw_map(drw, m->barwin, 0, 0, m->ww - (bargap ? 2 * m->gappx : 0), 2 * bh);
 
-	if ((barborder && bargap && m->gappx != 0) || m->gappx == 0)
-		XFillRectangle(drw->dpy, drw->drawable, drw->gc, 0, 2 * bh - 1, m->ww - (bargap ? 2 * m->gappx : 0), 1);
-	if (barborder && bargap && m->gappx != 0) {
-		XFillRectangle(drw->dpy, drw->drawable, drw->gc, 0, 0, 1, 2 * bh);
-		XFillRectangle(drw->dpy, drw->drawable, drw->gc, 0, 0, m->ww - (bargap ? 2 * m->gappx : 0), 1);
-		XFillRectangle(drw->dpy, drw->drawable, drw->gc, m->ww - 1 - (bargap ? 2 * m->gappx : 0), 0, 1, 2 * bh);
-	}
-	drw_map(drw, m->barwin, 0, 0, m->ww - (bargap ? 2 * m->gappx : 0), 2 * bh);
+	XSetForeground(drw->dpy, drw->gc, scheme[SchemeBar][ColBorder].pixel);
+	XFillRectangle(drw->dpy, drw->drawable, drw->gc, 0, 0, m->ww - (bargap ? 2 * m->gappx : 0), barhight);
+	drw_map(drw, m->barwin, 0, 0, m->ww - (bargap ? 2 * m->gappx : 0), barhight);
 }
 
 int drawsep(Monitor *m, int lr, int p, int xpos, int s, int y) {
@@ -1341,7 +1348,7 @@ drawstatus(char* stext, Monitor *m, int xpos, int l, int r)
 		istatustimer *= -1;
 
 	drawtheme(0,0,0,0,0);
-	drw_rect(drw, l, 0, selmon->ww - l - r, bh, 1, 1);
+	drw_rect(drw, l, barborder, selmon->ww - l - r, bh, 1, 1);
 
 	len = strlen(stext);
 	if (!(text = (char*) malloc(sizeof(char)*(len + 1))))
@@ -1392,7 +1399,7 @@ drawstatus(char* stext, Monitor *m, int xpos, int l, int r)
 					w = TEXTW(text) - lrpad;
 					if (x + w >= selmon->ww - r)
 						return;
-					drw_text(drw, x, (statustheme && !istatustimer) ? sep != fsep || block != fblock ? -1 : 0 : 0, w, bh, 0, text, 0);
+					drw_text(drw, x, barborder + ((statustheme && !istatustimer) ? sep != fsep || block != fblock ? -1 : 0 : 0), w, bh, 0, text, 0);
 					x += w;
 					/* process code */
 					while (text[++i] != '^') {
@@ -1454,7 +1461,7 @@ drawstatus(char* stext, Monitor *m, int xpos, int l, int r)
 				w = TEXTW(text) - lrpad;
 				if (x + w >= selmon->ww - r)
 					return;
-				drw_text(drw, x, (statustheme && !istatustimer) ? sep != fsep || block != fblock ? -1 : 0 : 0, w, bh, 0, text, 0);
+				drw_text(drw, x, barborder + ((statustheme && !istatustimer) ? sep != fsep || block != fblock ? -1 : 0 : 0), w, bh, 0, text, 0);
 				x += w;
 			}
 			i = -1;
@@ -1462,9 +1469,9 @@ drawstatus(char* stext, Monitor *m, int xpos, int l, int r)
 			if (block > 0 && !istatustimer) {
 				if (statustheme) {
 					if (sep != fsep || block != fblock)
-						drawtheme(sep, block, 1, statustheme, 0);
+						drawtheme(sep, block, 1, statustheme, barborder);
 					else
-						drawtheme(sep, block, 2, statustheme, 0);
+						drawtheme(sep, block, 2, statustheme, barborder);
 				} else if (statussep) {
 					if ((sep == fsep && block == fblock) && (statussep == 2))
 						prev = 1;
@@ -1487,7 +1494,7 @@ drawstatus(char* stext, Monitor *m, int xpos, int l, int r)
 	}
 
 	drawtheme(0,0,0,0,0);
-	drw_rect(drw, x, 0, selmon->ww - x - r, bh, 1, 1);
+	drw_rect(drw, x, barborder, selmon->ww - x - r, bh, 1, 1);
 
 	free(p);
 }
@@ -1512,20 +1519,16 @@ int drawltsymbol(Monitor *m, int lr, int p, int xpos, int y) {
 void
 drawbar(Monitor *m, int xpos)
 {
-	int i, len, l = 0, r = 0, lr = 0, pos = 0;
-
 	if (!m->showbar)
 		return;
-	int y = m->showebar ? bh : 0;
 
+	int i, len, l = barborder, r = barborder, lr = barborder, pos = 0;
+	int y = barborder + (m->showebar ? bh + barsep : 0);
 	len = sizeof(barorder)/sizeof(barorder[0]);
-
-	if (!m->showbar)
-		return;
 
 	for (i = 0; i < len && i >= 0; pos == 1 ? i-- : i++) {
 		if (strcmp ("bartab", barorder[i]) == 0) {
-			if (pos == 0) {pos = 1; i = len - 1; l = lr; lr = bargap ? 2 * selmon->gappx : 0; }
+			if (pos == 0) {pos = 1; i = len - 1; l = lr; lr = barborder + (bargap ? 2 * selmon->gappx : 0); }
 			else {r = lr; break;}
 		}
 		if (strcmp ("tagbar", barorder[i]) == 0)
@@ -1542,44 +1545,38 @@ drawbar(Monitor *m, int xpos)
 			lr = drawsep(m, lr, pos, xpos, 1, y);
 	}
 	drawtabgroups(m, l, r, xpos, 0, y);
-	drw_map(drw, m->barwin, 0, y, m->ww - (bargap ? 2 * m->gappx : 0), bh);
-	drawbarborder(m);
+	drw_map(drw, m->barwin, barborder, y, m->ww - (bargap ? 2 * m->gappx : 0) - 2 * barborder, bh);
 }
 
 void
 drawebar(char* stext, Monitor *m, int xpos)
 {
-	int i, len, l = 0, r = 0, lr = 0, pos = 0;
-
 	if (!m->showebar)
 		return;
 
+	int i, len, l = barborder, r = barborder, lr = barborder, pos = 0;
 	len = sizeof(ebarorder)/sizeof(ebarorder[0]);
-
-	if (!m->showebar)
-		return;
 
 	for (i = 0; i < len && i >= 0; pos == 1 ? i-- : i++) {
 		if (strcmp ("status", ebarorder[i]) == 0) {
-			if (pos == 0) {pos = 1; i = len - 1; l = lr; lr = bargap ? 2 * selmon->gappx : 0; }
+			if (pos == 0) {pos = 1; i = len - 1; l = lr; lr = barborder + (bargap ? 2 * selmon->gappx : 0); }
 			else {r = lr; break;}
 		}
 		if (strcmp ("tagbar", ebarorder[i]) == 0)
-			lr = drawtag(m, lr, pos, xpos, 0);
+			lr = drawtag(m, lr, pos, xpos, barborder);
 		if (strcmp ("ltsymbol", ebarorder[i]) == 0)
-			lr = drawltsymbol(m, lr, pos, xpos, 0);
+			lr = drawltsymbol(m, lr, pos, xpos, barborder);
 		if (strcmp ("systray", ebarorder[i]) == 0)
-			lr = drawsystray(m, lr, pos, xpos, 0);
+			lr = drawsystray(m, lr, pos, xpos, barborder);
 		if (strcmp ("sepgap", ebarorder[i]) == 0)
-			lr = drawsep(m, lr, pos, xpos, 3, 0);
+			lr = drawsep(m, lr, pos, xpos, 3, barborder);
 		if (strcmp ("gap", ebarorder[i]) == 0)
-			lr = drawsep(m, lr, pos, xpos, 2, 0);
+			lr = drawsep(m, lr, pos, xpos, 2, barborder);
 		if (strcmp ("seperator", ebarorder[i]) == 0)
-			lr = drawsep(m, lr, pos, xpos, 1, 0);
+			lr = drawsep(m, lr, pos, xpos, 1, barborder);
 	}
 	drawstatus(stext, m, xpos, l, r);
-	drw_map(drw, m->barwin, 0, 0, m->ww - (bargap ? 2 * m->gappx : 0), bh);
-	drawbarborder(m);
+	drw_map(drw, m->barwin, barborder, barborder, m->ww - (bargap ? 2 * m->gappx : 0) - 2 * barborder, bh);
 }
 
 void
@@ -2072,7 +2069,17 @@ motionnotify(XEvent *e)
 	XMotionEvent *ev = &e->xmotion;
 
 	if (ev->window == selmon->barwin) {
-		if (ev->y > bh || !selmon->showebar) { 	// why is "by" already in "ev->y" ???
+		if (ev->y > barborder && ev->y < bh + barborder && selmon->showebar) {
+			fblock = fsep = 0;
+			if (selmon->showbar && fbar != 1)
+				drawbar(selmon, 0);
+			fbar = 1;
+			if (ev->x < fsep || ev->x > fsep + fblock)
+				drawebar(rawstext, selmon, ev->x);
+			else
+				return;
+		} else if ((ev->y > barhight - bh - barborder && ev->y < barhight - barborder && selmon->showebar)
+					|| (ev->y > barborder && ev->y < barborder + bh && !selmon->showebar)) { 	// why is "by" already in "ev->y" ???
 			fblock = fsep = 0;
 			if (selmon->showebar && fbar != 2)
 				drawebar(rawstext, selmon, 0);
@@ -2082,14 +2089,9 @@ motionnotify(XEvent *e)
 			else
 				return;
 		} else {
-			fblock = fsep = 0;
-			if (selmon->showbar && fbar != 1)
-				drawbar(selmon, 0);
-			fbar = 1;
-			if (ev->x < fsep || ev->x > fsep + fblock)
-				drawebar(rawstext, selmon, ev->x);
-			else
-				return;
+			fblock = fsep = fbar = 0;
+			drawebar(rawstext, selmon, 0);
+			drawbar(selmon, 0);
 		}
 	} else if (fbar || fsep || fblock) {
 		fblock = fsep = fbar = 0;
@@ -2669,7 +2671,8 @@ setup(void)
 		updatesystray();
 	}
 	/* init bars */
-	bartheme = abs(barborder) > 1 && gappx <= tileswitch ? 1 : 0;
+	bartheme = (tileswitchcolor && gappx <= tileswitch) ? 1 : 0;
+	barhight = (showbar + showebar) * bh + 2 * barborder + (showbar + showebar == 2 ? barsep : 0);
 	updatebars();
 	updatestatus();
 	updatepreview();
@@ -2971,8 +2974,10 @@ togglebar(const Arg *arg)
 			drawbar(selmon, 0);
 		}
 	}
-	XMoveResizeWindow(dpy, selmon->barwin, selmon->wx + (bargap ? selmon->gappx : 0), selmon->by, selmon->ww - (bargap ? 2 * selmon->gappx : 0), selmon->showbar ? 2 * bh : bh);
+	XMoveResizeWindow(dpy, selmon->barwin, selmon->wx + (bargap ? selmon->gappx : 0), selmon->by,
+				   selmon->ww - (bargap ? 2 * selmon->gappx : 0), barhight);
 	XUnmapWindow(dpy, selmon->tagwin);
+	drawbarborder(selmon);
 	arrangemon(selmon);
 }
 
@@ -2989,8 +2994,10 @@ toggleebar(const Arg *arg)
 			drawebar(rawstext, selmon, 0);
 		}
 	}
-	XMoveResizeWindow(dpy, selmon->barwin, selmon->wx + (bargap ? selmon->gappx : 0), selmon->by, selmon->ww - (bargap ? 2 * selmon->gappx : 0), selmon->showebar ? 2 * bh : bh);
+	XMoveResizeWindow(dpy, selmon->barwin, selmon->wx + (bargap ? selmon->gappx : 0), selmon->by,
+				   selmon->ww - (bargap ? 2 * selmon->gappx : 0), barhight);
 	XUnmapWindow(dpy, selmon->tagwin);
+	drawbarborder(selmon);
 	arrangemon(selmon);
 }
 
@@ -3211,7 +3218,7 @@ updatebars(void)
 	XClassHint ch = {"dwm", "dwm"};
 	for (m = mons; m; m = m->next) {
 		if (!m->barwin) {
-			m->barwin = XCreateWindow(dpy, root, m->wx + bgap, m->by, m->ww - 2 * bgap, (showbar + showebar) * bh, 0, depth,
+			m->barwin = XCreateWindow(dpy, root, m->wx + bgap, m->by, m->ww - 2 * bgap, barhight, 0, depth,
 									InputOutput, visual,
 									CWOverrideRedirect|CWBackPixel|CWBorderPixel|CWColormap|CWEventMask, &wa);
 			XDefineCursor(dpy, m->barwin, cursor[CurNormal]->cursor);
@@ -3219,6 +3226,7 @@ updatebars(void)
 			XSetClassHint(dpy, m->barwin, &ch);
 			XSetWMName(dpy, m->barwin, &tp);
 		}
+		drawbarborder(m);
 	}
 }
 
@@ -3226,19 +3234,16 @@ void
 updatebarpos(Monitor *m)
 {
 	int bgap = bargap ? m->gappx : 0;
+	int barcount = abs(m->showbar) + abs(m->showebar);
+	barhight = barcount * bh + 2 * barborder + (barcount == 2 ? barsep : 0);
 	m->wy = m->my;
 	m->wh = m->mh;
-	if (abs(m->showbar) + abs(m->showebar) == 2){
-		m->wh -= 2 * bh + bgap;
-		m->by =  m->topbar ? m->wy + bgap : m->wy + m->wh;
-		m->wy = m->topbar ? m->wy + 2 * bh + bgap : m->wy;
-	} else if (abs(m->showbar) + abs(m->showebar) == 1) {
-		m->wh -= bh + bgap;
+	if (barcount != 0) {
+		m->wh -= barhight + bgap;
 		m->by = m->topbar ? m->wy + bgap : m->wy + m->wh;
-		m->wy = m->topbar ? m->wy + bh + bgap: m->wy;
-	} else {
-		m->by = - 2 * bh;
-    }
+		m->wy = m->topbar ? m->wy + barhight + bgap : m->wy;
+	} else
+		m->by = -barhight;
 }
 
 void
@@ -5230,13 +5235,13 @@ setgaps(const Arg *arg)
 	if (tileswitch >= 0 && abs(selmon->gappx + arg->i - tileswitch) <= abs(arg->i)) {
 		Client *c;
 		if ((selmon->gappx + arg->i <= tileswitch && arg->i < 0)) {
-			if (abs(barborder) > 1)
+			if (tileswitchcolor)
 				bartheme = 1;
 			for (c = nexttiled(selmon->clients); c; c = nexttiled(c->next))
 				XSetWindowBorder(dpy, c->win, scheme[SchemeBorder][ColBorder].pixel);
 			focus(c);
 		} else if ((selmon->gappx + arg->i > tileswitch && arg->i > 0)) {
-			if (abs(barborder) > 1)
+			if (tileswitchcolor)
 				bartheme = 0;
 			for (c = nexttiled(selmon->clients); c; c = nexttiled(c->next))
 				XSetWindowBorder(dpy, c->win, scheme[SchemeBorder][ColBg].pixel);
@@ -5249,10 +5254,11 @@ setgaps(const Arg *arg)
 		selmon->gappx += arg->i;
 	updatebarpos(selmon);
 	if (bargap) {
-		int bar = selmon->showbar + selmon->showebar;
-		XMoveResizeWindow(dpy, selmon->barwin, selmon->wx + selmon->gappx, selmon->by, selmon->ww - 2 * selmon->gappx, bar == 2 ? 2 * bh : bh);
+		XMoveResizeWindow(dpy, selmon->barwin, selmon->wx + selmon->gappx, selmon->by,
+					selmon->ww - 2 * selmon->gappx, barhight);
 		XUnmapWindow(dpy, selmon->tagwin);
 	}
+	drawbarborder(selmon);
 	arrangemon(selmon);
 }
 

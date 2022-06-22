@@ -68,7 +68,8 @@ static const char slopresizestyle[]	= "-t 0 -l -c 0.92,0.85,0.69,0.3 -o";	/* do 
 
 static const int attachdirection	= 2;		/* 0 default, 1 above, 2 aside, 3 below, 4 bottom, 5 top */
 static const int bargap				= 1;		/* bar padding on/off */
-static const int barborder			= 1;		/* 0: off (disable in picom!) 1: barborder 2: border and tileswitch theme-change; -1,-2: focus-indicator */
+static const int barborder			= 1;		/* size of barborders; < 0 --> focus-indicator */
+static const int barsep				= barborder;	/* size of barseperator */
 static const int borderpx			= 1;		/* border pixel of windows */
 static const int tagborderpx		= borderpx;	/* border pixel of tagpreview */
 static const int floatposgrid_x		= 5;		/* float grid columns */
@@ -93,6 +94,7 @@ static const int systrayspacing 	= 2;		/* systray spacing */
 static const int systraypinningfailfirst = 1;	/* 1: if pinning fails, display systray on the first monitor, False: display systray on the last monitor*/
 static const int showsystray		= 1;		/* 0 means no systray */
 static const int tileswitch			= 2;		/* gapps <= tileswitch = borderpx on, resizehints off */
+static const int tileswitchcolor	= 1;		/* switch to alt-colors on tileswich */
 static const int borderswitch		= 1;		/* 1: switch border on/off with tileswitch */
 static const int topbar				= 1;		/* 0 means bottom bar */
 
