@@ -70,6 +70,7 @@ static const int attachdirection	= 2;		/* 0 default, 1 above, 2 aside, 3 below, 
 static const int bargap				= 1;		/* bar padding on/off */
 static const int barborder			= 1;		/* size of barborders; < 0 --> focus-indicator */
 static const int barsep				= barborder;	/* size of barseperator */
+static const int barhighlight		= 1;		/* highlight border when focused */
 static const int borderpx			= 1;		/* border pixel of windows */
 static const int tagborderpx		= borderpx;	/* border pixel of tagpreview */
 static const int floatposgrid_x		= 5;		/* float grid columns */
