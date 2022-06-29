@@ -171,7 +171,7 @@ xfont_free(Fnt *font)
 }
 
 Fnt*
-drw_fontset_create(Drw* drw, const char *fonts[], size_t fontcount)
+drw_fontset_create(Drw* drw, char *fonts[], size_t fontcount)
 {
 	Fnt *cur, *ret = NULL;
 	size_t i;
@@ -198,8 +198,10 @@ drw_fontset_free(Fnt *font)
 }
 
 void
-drw_clr_create(Drw *drw, Clr *dest, const char *clrname, float alpha)
+drw_clr_create(Drw *drw, Clr *dest, const char *clrname, const char *alpha)
 {
+	float a = atof(alpha);
+
 	if (!drw || !dest || !clrname)
 		return;
 
@@ -207,16 +209,16 @@ drw_clr_create(Drw *drw, Clr *dest, const char *clrname, float alpha)
 	                       clrname, dest))
 		die("error, cannot allocate color '%s'", clrname);
 
-	dest->pixel = (unsigned char)(((dest->pixel & 0x00ff0000) >> 16) * alpha) << 16 \
-				   | (unsigned char)(((dest->pixel & 0x0000ff00) >> 8) * alpha) << 8 \
-				   | (unsigned char)((dest->pixel & 0x000000ff) * alpha) \
-				   | (unsigned char)(0xff * alpha) << 24;
+	dest->pixel = (unsigned char)(((dest->pixel & 0x00ff0000) >> 16) * a) << 16 \
+				   | (unsigned char)(((dest->pixel & 0x0000ff00) >> 8) * a) << 8 \
+				   | (unsigned char)((dest->pixel & 0x000000ff) * a) \
+				   | (unsigned char)(0xff * a) << 24;
 }
 
 /* Wrapper to create color schemes. The caller has to call free(3) on the
  * returned color scheme when done using it. */
 Clr *
-drw_scm_create(Drw *drw, char *clrnames[], const float alphas[], size_t clrcount)
+drw_scm_create(Drw *drw, char *clrnames[], char *alphas[], size_t clrcount)
 {
 	size_t i;
 	Clr *ret;

@@ -27,22 +27,22 @@
 #define SWITCHTAG_VIEW				1 << 6
 #define SWITCHTAG_TOGGLEVIEW		1 << 7
 
-static const int drawtagmask		= DRAWCLASSICTAGS; /* | DRAWCLASSICTAGS | DRAWTAGGRID | */
-static const int tagrows			= 2;
+static int drawtagmask		= DRAWCLASSICTAGS; /* | DRAWCLASSICTAGS | DRAWTAGGRID | */
+static int tagrows			= 2;
 
 /* tagging */
-static const char *tags[] = { "1", "2", "3", "4", "5", "6" };
+static char *tags[] = { "1", "2", "3", "4", "5", "6" };
 
 
 /* barorder and theme */
-static const int seppad 			= 5;		/* top and bottom padding of seperator (if "> bh" = dot or "< 0" dotradius) */
-static const int statussep			= 1;		/* 0 = off, 1 = on, 2 = hide on focus */
-static const int tabbarsep			= 2;		/* 0 = off, 1 = on, 2 = hide on focus */
-static const int statustheme		= 2;		/* 0 = classic, 1 = button-theme, 2 = float-theme */
-static const int tabbartheme		= 2;		/* 0 = classic, 1 = button-theme, 2 = float-theme */
-static const int tagtheme			= 0;		/* 0 = classic, 1 = button-theme, 2 = float-theme */
+static int seppad 			= 5;		/* top and bottom padding of seperator (if "> bh" = dot or "< 0" dotradius) */
+static int statussep		= 1;		/* 0 = off, 1 = on, 2 = hide on focus */
+static int tabbarsep		= 2;		/* 0 = off, 1 = on, 2 = hide on focus */
+static int statustheme		= 2;		/* 0 = classic, 1 = button-theme, 2 = float-theme */
+static int tabbartheme		= 2;		/* 0 = classic, 1 = button-theme, 2 = float-theme */
+static int tagtheme			= 0;		/* 0 = classic, 1 = button-theme, 2 = float-theme */
 
-static const char *barorder[]		= {
+static char *barorder[]		= {
 //	"sepgap",									/*	[|]	*/
 //	"gap",										/*	[ ]	*/
 //	"seperator",								/*	 |	*/
@@ -52,52 +52,52 @@ static const char *barorder[]		= {
 	"systray",
 ""};
 
-static const char *ebarorder[] = {
+static char *ebarorder[] = {
 	"status", 									/* FIXED ON "EBAR" - sepparates left and right allignment */
 ""};
 
 
 /* appearance */
-static const char dmenufont[]		= "monospace:pixelsize=16";
-static const char *fonts[]			= { dmenufont };
-static const char istatusprefix[]	= "msg: ";			/* prefix for important status messages */
-static const char istatusclose[]	= "msg:close";		/* prefix to close messages */
-static const char icommandprefix[]	= "dwm:cmd ";		/* prefix for commands */
-static const char slopspawnstyle[]	= "-t 0 -l -c 0.92,0.85,0.69,0.3 -o";	/* do NOT define -f (format) here */
-static const char slopresizestyle[]	= "-t 0 -l -c 0.92,0.85,0.69,0.3 -o";	/* do NOT define -f (format) here */
+static char font[]				= "monospace:pixelsize=16";
+static char *fonts[]			= { font };
+static char istatusprefix[]		= "msg: ";			/* prefix for important status messages */
+static char istatusclose[]		= "msg:close";		/* prefix to close messages */
+static char icommandprefix[]	= "dwm:cmd ";		/* prefix for commands */
+static char slopspawnstyle[]	= "-t 0 -l -c 0.92,0.85,0.69,0.3 -o";	/* do NOT define -f (format) here */
+static char slopresizestyle[]	= "-t 0 -l -c 0.92,0.85,0.69,0.3 -o";	/* do NOT define -f (format) here */
 
-static const int attachdirection	= 2;		/* 0 default, 1 above, 2 aside, 3 below, 4 bottom, 5 top */
-static const int bargap				= 1;		/* bar padding on/off */
-static const int barborder			= 1;		/* size of barborders; < 0 --> focus-indicator */
-static const int barsep				= barborder;	/* size of barseperator */
-static const int barhighlight		= 1;		/* highlight border when focused */
-static const int borderpx			= 1;		/* border pixel of windows */
-static const int tagborderpx		= borderpx;	/* border pixel of tagpreview */
-static const int floatposgrid_x		= 5;		/* float grid columns */
-static const int floatposgrid_y		= 5;		/* float grid rows */
-static const int gappx				= 4;		/* gaps between windows */
-static const int iconpad			= 1;		/* icon padding to barborders */
-static const int iconspacing		= 5;		/* space between icon and title */
-static const int istatustimeout		= 5;		/* max timeout before displaying regular status after istatus */
-static const int oneclientdimmer	= 1;		/* 1 makes tab for one client in unfocused color... */
-static const int riodraw_borders	= 0;        /* 0 or 1, indicates whether the area drawn using slop includes the window borders */
-static const int riodraw_matchpid	= 1;        /* 0 or 1, indicates whether to match the PID of the client that was spawned with riospawn */
-static const int riodraw_spawnasync	= 0;        /* 0 spawned after selection, 1 application initialised in background while selection is made */
-static const int scalepreview		= 4;		/* Tag preview scaling */
-static const int snap				= 32;		/* snap pixel */
-static const int showbar			= 1;		/* 0 means no bar */
-static const int showebar           = 1;        /* 0 means no extra bar */
-static const int statuscenter		= 0;		/* center status elements */
-static const int titlecenter		= 2;		/* 1 - center title, 2 center title with icon */
-static const int swallowfloating	= 1;		/* 1 means swallow floating windows by default */
-static const int systraypinning 	= 0;		/* 0: sloppy systray follows selected monitor, >0: pin systray to monitor X */
-static const int systrayspacing 	= 2;		/* systray spacing */
-static const int systraypinningfailfirst = 1;	/* 1: if pinning fails, display systray on the first monitor, False: display systray on the last monitor*/
-static const int showsystray		= 1;		/* 0 means no systray */
-static const int tileswitch			= 2;		/* gapps <= tileswitch = borderpx on, resizehints off */
-static const int tileswitchcolor	= 1;		/* switch to alt-colors on tileswich */
-static const int borderswitch		= 1;		/* 1: switch border on/off with tileswitch */
-static const int topbar				= 1;		/* 0 means bottom bar */
+static int attachdirection		= 2;		/* 0 default, 1 above, 2 aside, 3 below, 4 bottom, 5 top */
+static int bargap				= 1;		/* bar padding on/off */
+static int barborder			= 1;		/* size of barborders */
+static int barsep				= 1;		/* size of barseperator */
+static int barhighlight			= 1;		/* highlight border when focused */
+static int borderpx				= 1;		/* border pixel of windows */
+static int tagborderpx			= 1;		/* border pixel of tagpreview */
+static int floatposgrid_x		= 5;		/* float grid columns */
+static int floatposgrid_y		= 5;		/* float grid rows */
+static int gappx				= 4;		/* gaps between windows */
+static int iconpad				= 1;		/* icon padding to barborders */
+static int iconspacing			= 5;		/* space between icon and title */
+static int istatustimeout		= 5;		/* max timeout before displaying regular status after istatus */
+static int oneclientdimmer		= 1;		/* 1 makes tab for one client in unfocused color... */
+static int riodraw_borders		= 0;        /* 0 or 1, indicates whether the area drawn using slop includes the window borders */
+static int riodraw_matchpid		= 1;        /* 0 or 1, indicates whether to match the PID of the client that was spawned with riospawn */
+static int riodraw_spawnasync	= 0;        /* 0 spawned after selection, 1 application initialised in background while selection is made */
+static int scalepreview			= 4;		/* Tag preview scaling */
+static int snap					= 32;		/* snap pixel */
+static int showbar				= 1;		/* 0 means no bar */
+static int showebar         	= 1;        /* 0 means no extra bar */
+static int statuscenter			= 0;		/* center status elements */
+static int titlecenter			= 2;		/* 1 - center title, 2 center title with icon */
+static int swallowfloating		= 1;		/* 1 means swallow floating windows by default */
+static int systraypinning 		= 0;		/* 0: sloppy systray follows selected monitor, >0: pin systray to monitor X */
+static int systrayspacing 		= 2;		/* systray spacing */
+static int systraypinningfailfirst = 1;	/* 1: if pinning fails, display systray on the first monitor, False: display systray on the last monitor*/
+static int showsystray			= 1;		/* 0 means no systray */
+static int tileswitch			= 2;		/* gapps <= tileswitch = resizehints off */
+static int tileswitchcolor		= 1;		/* switch to alt-colors on tileswich */
+static int borderswitch			= 1;		/* 1: switch border on/off with tileswitch */
+static int topbar				= 1;		/* 0 means bottom bar */
 
 static char bar_fg[]			= "#bbbbbb";
 static char bar_bg[]			= "#222222";
@@ -123,9 +123,39 @@ static char tag_fg[]			= "#005577";
 static char tag_bg[]			= "#eeeeee";
 static char tag_brd[]			= "#222222";
 static char tag_flo[]			= "#222222";
+static char alt_fg[]			= "#444444";
+static char alt_bg[]			= "#bbbbbb";
+static char alt_brd[]			= "#bbbbbb";
+static char alt_flo[]			= "#444444";
 
-static const float transp    = 0.0;
-static const float semitr    = 0.8;
+static char bar_fg_a[]			= "1.0";
+static char bar_bg_a[]			= "1.0";
+static char bar_brd_a[]			= "1.0";
+static char bar_flo_a[]			= "1.0";
+static char sel_fg_a[]			= "1.0";
+static char sel_bg_a[]			= "1.0";
+static char sel_brd_a[]			= "1.0";
+static char sel_flo_a[]			= "1.0";
+static char brd_fg_a[]			= "1.0";
+static char brd_bg_a[]			= "1.0";
+static char brd_brd_a[]			= "1.0";
+static char brd_flo_a[]			= "1.0";
+static char foc_fg_a[]			= "1.0";
+static char foc_bg_a[]			= "1.0";
+static char foc_brd_a[]			= "1.0";
+static char foc_flo_a[]			= "1.0";
+static char unf_fg_a[]			= "1.0";
+static char unf_bg_a[]			= "1.0";
+static char unf_brd_a[]			= "1.0";
+static char unf_flo_a[]			= "1.0";
+static char tag_fg_a[]			= "1.0";
+static char tag_bg_a[]			= "1.0";
+static char tag_brd_a[]			= "1.0";
+static char tag_flo_a[]			= "1.0";
+static char alt_fg_a[]			= "1.0";
+static char alt_bg_a[]			= "1.0";
+static char alt_brd_a[]			= "1.0";
+static char alt_flo_a[]			= "1.0";
 
 static char *colors[][4]		= {
 	/*					fg			bg			border		float   */
@@ -135,40 +165,42 @@ static char *colors[][4]		= {
 	[SchemeFocus]	= { foc_fg,		foc_bg,		foc_brd,	foc_flo },
 	[SchemeUnfocus]	= { unf_fg,		unf_bg,		unf_brd,	unf_flo },
 	[SchemeTag]		= { tag_fg,		tag_bg,		tag_brd,	tag_flo },
+	[SchemeAlt]		= { alt_fg,		alt_bg,		alt_brd,	alt_flo },
 };
 
-static const float alphas[][4] = {
+static char *alphas[][4] 		= {
     /*					fg			bg			border		float	*/
-    [SchemeBar]		= { OPAQUE,		OPAQUE,		OPAQUE,		OPAQUE	},
-    [SchemeSelect]	= { OPAQUE,		OPAQUE,		OPAQUE,		OPAQUE	},
-    [SchemeBorder]	= { OPAQUE,		OPAQUE,		OPAQUE,		OPAQUE	},
-    [SchemeFocus]	= { OPAQUE,		OPAQUE,		OPAQUE,		OPAQUE	},
-    [SchemeUnfocus] = { OPAQUE,		OPAQUE,		OPAQUE,		OPAQUE	},
-    [SchemeTag]		= { OPAQUE,		OPAQUE,		OPAQUE,		OPAQUE	},
+	[SchemeBar]		= { bar_fg_a,	bar_bg_a,	bar_brd_a,	bar_flo_a },
+	[SchemeSelect]	= { sel_fg_a,	sel_bg_a,	sel_brd_a,	sel_flo_a },
+	[SchemeBorder]	= { brd_fg_a,	brd_bg_a,	brd_brd_a,	brd_flo_a },
+	[SchemeFocus]	= { foc_fg_a,	foc_bg_a,	foc_brd_a,	foc_flo_a },
+	[SchemeUnfocus]	= { unf_fg_a,	unf_bg_a,	unf_brd_a,	unf_flo_a },
+	[SchemeTag]		= { tag_fg_a,	tag_bg_a,	tag_brd_a,	tag_flo_a },
+	[SchemeAlt]		= { alt_fg_a,	alt_bg_a,	alt_brd_a,	alt_flo_a },
 };
 
 
 /* layout(s) */
-static const float mfact			= 0.55;		/* factor of master area size [0.05..0.95] */
-static const int nmaster			= 1;		/* number of clients in master area */
-static const int resizehints		= 1;		/* 1 respect size hints in tiled resizals */
-static const int lockfullscreen 	= 1;		/* 1 will force focus on fullscreen window */
+static float mfact			= 0.55;		/* factor of master area size [0.05..0.95] */
+static int nmaster			= 1;		/* number of clients in master area */
+static int resizehints		= 1;		/* 1 respect size hints in tiled resizals */
+static int lockfullscreen 	= 1;		/* 1 will force focus on fullscreen window */
 
-static const Layout layouts[]		= {
+static Layout layouts[]		= {
 	/* symbol		arrange function */
 	{ "[]=",		tile },						/* first entry is default */
 	{ "><>",		NULL },						/* no layout function means floating behavior */
 	{ "[M]",		monocle },
 };
 
-static const int  layoutaxis[] = {
+static int  layoutaxis[] = {
 	1,    /* layout axis: 1 = x, 2 = y; negative values mirror the layout */
 	2,    /* master axis: 1 = x (left to right), 2 = y (top to bottom), 3 = z (monocle) */
 	2,    /* stack  axis: 1 = x (left to right), 2 = y (top to bottom), 3 = z (monocle) */
 };
 
 /* rules */
-static const Rule rules[] = {
+static Rule rules[] = {
 	/* xprop(1):
 	 *	WM_CLASS(STRING)	= instance, class
 	 *	WM_NAME(STRING)		= title
@@ -237,37 +269,37 @@ static const Rule rules[] = {
 
 /* helper for spawning shell commands in the pre dwm-5.0 fashion */
 #define SHCMD(cmd) { .v = (const char*[]){ "/bin/sh", "-c", cmd, NULL } }
-static const char notifymenu[]	= "cat /tmp/notify | sed 's/^\\^........\\^//; s/\\^d\\^//' | dmenu -ix -l 10 | sort -r | xargs -I {} sed -i '{}d' /tmp/notify && kill -48 $(pidof dwmblocks)";
+static char notifymenu[]	= "cat /tmp/notify | sed 's/^\\^........\\^//; s/\\^d\\^//' | dmenu -ix -l 10 | sort -r | xargs -I {} sed -i '{}d' /tmp/notify && kill -48 $(pidof dwmblocks)";
 
 
 /* commands */
 static char dmenumon[2] = "0"; /* component of dmenucmd, manipulated in spawn() */
 static char dmenugap[16] = "0";
 static char dmenulen[16] = "0";
-static const char *dmenucmd[] = { "dmenu_run", "-m", dmenumon, "-fn", dmenufont, "-x", dmenugap, "-y", dmenugap, "-z", dmenulen, NULL };
-static const char *termcmd[]  = { "st", "-u", "-e", "bash", "--rcfile", "~/.config/tmux/shell/stmux/.bashrc", NULL };
-static const char *scratchpadcmd[] = { "s", "st", "-t", "scratchpad", "-u", "-e", "bash", "--rcfile", "~/.config/tmux/shell/scratchpad/.bashrc", NULL };
-static const char *browser[] = { "qutebrowser", NULL };
-static const char *alsam[] = { "st", "-c", "dbar", "-n", "alsam", "-e", "alsamixer", NULL };
-static const char *pulsm[] = { "pavucontrol", "--class", "dbar", "--name", "pulsm", NULL };
+static char *dmenucmd[] = { "dmenu_run", "-m", dmenumon, "-fn", font, "-x", dmenugap, "-y", dmenugap, "-z", dmenulen, NULL };
+static char *termcmd[]  = { "st", "-u", "-e", "bash", "--rcfile", "~/.config/tmux/shell/stmux/.bashrc", NULL };
+static char *scratchpadcmd[] = { "s", "st", "-t", "scratchpad", "-u", "-e", "bash", "--rcfile", "~/.config/tmux/shell/scratchpad/.bashrc", NULL };
+static char *browser[] = { "qutebrowser", NULL };
+static char *alsam[] = { "st", "-c", "dbar", "-n", "alsam", "-e", "alsamixer", NULL };
+static char *pulsm[] = { "pavucontrol", "--class", "dbar", "--name", "pulsm", NULL };
 
 
 /* xsetroot fake commands */
-static const Command commands[]		= {
-	/* command		function		argument */
-	{ "xrdb",		xrdb,			{.v = NULL }	},
-	{ "kill",		killclient,		{0}  			},
-	{ "alsam",		spawn,			{.v = alsam }	},
-	{ "pulsm",		spawn,			{.v = pulsm }	},
+static Command commands[]		= {
+	/* command		function			argument */
+	{ "xrdb",		resource_reload,	{.v = NULL }	},
+	{ "kill",		killclient,			{0}  			},
+	{ "alsam",		spawn,				{.v = alsam }	},
+	{ "pulsm",		spawn,				{.v = pulsm }	},
 };
 
 
 /* keymap */
 #include <X11/XF86keysym.h>
 
-static const float mset				= 0.05;		/* resize m-fact */
-static const float cset				= 0.25;		/* resize c-fact */
-static char pospx[16]				= "25";		/* change in pixel for floatpos */
+static float mset			= 0.05;		/* resize m-fact */
+static float cset			= 0.25;		/* resize c-fact */
+static char pospx[16]		= "25";		/* change in pixel for floatpos */
 static Key keys[] = {
 	/* modifier						key					function				argument */
     { 0,	XF86XK_AudioLowerVolume,					spawn,					SHCMD("/usr/bin/amixer -q sset Master 5%-; kill -35 $(pidof dwmblocks)") },
@@ -335,7 +367,7 @@ static Key keys[] = {
 	{ MODKEY,						XK_plus,			setgaps,				{.i = +2 } },
 	{ MODKEY|ShiftMask,				XK_o,				setgaps,				{.i = 0  } },
 	{ MODKEY|ControlMask|ShiftMask,	XK_q,				quit,					{0} },
-	{ MODKEY|ShiftMask,				XK_r,				xrdb,					{.v = NULL } },
+	{ MODKEY|ShiftMask,				XK_r,				resource_reload,		{.v = NULL } },
 
 	{ MODKEY|ALT,					XK_n,				shiftviewclients,		{ .i = +1 } },
 	{ MODKEY|ALT,					XK_p,				shiftviewclients,		{ .i = -1 } },
@@ -414,3 +446,99 @@ static Button buttons[] = {
 	{ ClkRootWin,			0,				Button3,		spawn,				SHCMD("xmenu.sh") },
 };
 
+ResourcePref resources[] = {
+		{ "font",					STRING,		&font },
+
+		{ "bar_fg",					STRING,		&bar_fg },
+		{ "bar_bg",					STRING,		&bar_bg },
+		{ "bar_brd",				STRING,		&bar_brd },
+		{ "bar_flo",				STRING,		&bar_flo },
+		{ "sel_fg",					STRING,		&sel_fg },
+		{ "sel_bg",					STRING,		&sel_bg },
+		{ "sel_brd",				STRING,		&sel_brd },
+		{ "sel_flo",				STRING,		&sel_flo },
+		{ "brd_fg",					STRING,		&brd_fg },
+		{ "brd_bg",					STRING,		&brd_bg },
+		{ "brd_brd",				STRING,		&brd_brd },
+		{ "brd_flo",				STRING,		&brd_flo },
+		{ "foc_fg",					STRING,		&foc_fg },
+		{ "foc_bg",					STRING,		&foc_bg },
+		{ "foc_brd",				STRING,		&foc_brd },
+		{ "foc_flo",				STRING,		&foc_flo },
+		{ "unf_fg",					STRING,		&unf_fg },
+		{ "unf_bg",					STRING,		&unf_bg },
+		{ "unf_brd",				STRING,		&unf_brd },
+		{ "unf_flo",				STRING,		&unf_flo },
+		{ "tag_fg",					STRING,		&tag_fg },
+		{ "tag_bg",					STRING,		&tag_bg },
+		{ "tag_brd",				STRING,		&tag_brd },
+		{ "tag_flo",				STRING,		&tag_flo },
+		{ "alt_fg",					STRING,		&alt_fg },
+		{ "alt_bg",					STRING,		&alt_bg },
+		{ "alt_brd",				STRING,		&alt_brd },
+		{ "alt_flo",				STRING,		&alt_flo },
+
+		{ "bar_fg_a",				STRING,		&bar_fg_a },
+		{ "bar_bg_a",				STRING,		&bar_bg_a },
+		{ "bar_brd_a",				STRING,		&bar_brd_a },
+		{ "bar_flo_a",				STRING,		&bar_flo_a },
+		{ "sel_fg_a",				STRING,		&sel_fg_a },
+		{ "sel_bg_a",				STRING,		&sel_bg_a },
+		{ "sel_brd_a",				STRING,		&sel_brd_a },
+		{ "sel_flo_a",				STRING,		&sel_flo_a },
+		{ "brd_fg_a",				STRING,		&brd_fg_a },
+		{ "brd_bg_a",				STRING,		&brd_bg_a },
+		{ "brd_brd_a",				STRING,		&brd_brd_a },
+		{ "brd_flo_a",				STRING,		&brd_flo_a },
+		{ "foc_fg_a",				STRING,		&foc_fg_a },
+		{ "foc_bg_a",				STRING,		&foc_bg_a },
+		{ "foc_brd_a",				STRING,		&foc_brd_a },
+		{ "foc_flo_a",				STRING,		&foc_flo_a },
+		{ "unf_fg_a",				STRING,		&unf_fg_a },
+		{ "unf_bg_a",				STRING,		&unf_bg_a },
+		{ "unf_brd_a",				STRING,		&unf_brd_a },
+		{ "unf_flo_a",				STRING,		&unf_flo_a },
+		{ "tag_fg_a",				STRING,		&tag_fg_a },
+		{ "tag_bg_a",				STRING,		&tag_bg_a },
+		{ "tag_brd_a",				STRING,		&tag_brd_a },
+		{ "tag_flo_a",				STRING,		&tag_flo_a },
+		{ "alt_fg_a",				STRING,		&alt_fg_a },
+		{ "alt_bg_a",				STRING,		&alt_bg_a },
+		{ "alt_brd_a",				STRING,		&alt_brd_a },
+		{ "alt_flo_a",				STRING,		&alt_flo_a },
+
+		{ "seppad",					INTEGER,	&seppad },
+		{ "statussep",				INTEGER,	&statussep },
+		{ "tabbarsep",				INTEGER,	&tabbarsep },
+		{ "statustheme",			INTEGER,	&statustheme },
+		{ "tabbartheme",			INTEGER,	&tabbartheme },
+		{ "tagtheme",				INTEGER,	&tagtheme },
+		{ "barborder",				INTEGER,	&barborder },
+		{ "barsep",					INTEGER,	&barsep },
+		{ "barhighlight",			INTEGER,	&barhighlight },
+		{ "attachdirection",		INTEGER,	&attachdirection },
+		{ "bargap",					INTEGER,	&bargap },
+		{ "borderpx",				INTEGER,	&borderpx },
+		{ "tagborderpx",			INTEGER,	&tagborderpx },
+		{ "floatposgrid_x",			INTEGER,	&floatposgrid_x },
+		{ "floatposgrid_y",			INTEGER,	&floatposgrid_y },
+		{ "gappx",					INTEGER,	&gappx },
+		{ "iconpad",				INTEGER,	&iconpad },
+		{ "iconspacing",			INTEGER,	&iconspacing },
+		{ "oneclientdimmer",		INTEGER,	&oneclientdimmer },
+		{ "scalepreview",			INTEGER,	&scalepreview },
+		{ "snap",					INTEGER,	&snap },
+		{ "showbar",				INTEGER,	&showbar },
+		{ "showebar",				INTEGER,	&showebar },
+		{ "statuscenter",			INTEGER,	&statuscenter },
+		{ "titlecenter",			INTEGER,	&titlecenter },
+		{ "swallowfloating",		INTEGER,	&swallowfloating },
+		{ "tileswitch",				INTEGER,	&tileswitch },
+		{ "tileswitchcolor",		INTEGER,	&tileswitchcolor },
+		{ "borderswitch",			INTEGER,	&borderswitch },
+		{ "topbar",					INTEGER,	&topbar },
+		{ "mfact",					FLOAT,		&mfact },
+		{ "nmaster",				INTEGER,	&nmaster },
+		{ "resizehints",			INTEGER,	&resizehints },
+		{ "lockfullscreen",			INTEGER,	&lockfullscreen },
+};

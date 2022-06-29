@@ -72,24 +72,6 @@
 #define TEXTW(X)                (drw_fontset_getwidth(drw, (X)) + lrpad)
 
 /* patch - definitions */
-#define XRDB_LOAD_COLOR(R,V)    if (XrmGetResource(xrdb, R, NULL, &type, &value) == True) { \
-                                  if (value.addr != NULL && strnlen(value.addr, 8) == 7 && value.addr[0] == '#') { \
-                                    int i = 1; \
-                                    for (; i <= 6; i++) { \
-                                      if (value.addr[i] < 48) break; \
-                                      if (value.addr[i] > 57 && value.addr[i] < 65) break; \
-                                      if (value.addr[i] > 70 && value.addr[i] < 97) break; \
-                                      if (value.addr[i] > 102) break; \
-                                    } \
-                                    if (i == 7) { \
-                                      strncpy(V, value.addr, 7); \
-                                      V[7] = '\0'; \
-                                    } \
-                                  } \
-                                }
-
-#define OPAQUE                  1.0
-
 #define SYSTEM_TRAY_REQUEST_DOCK    0
 #define _NET_SYSTEM_TRAY_ORIENTATION_HORZ 0
 
@@ -110,7 +92,7 @@
 /* enums */
 enum { Manager, Xembed, XembedInfo, XLast }; /* Xembed atoms */
 enum { CurNormal, CurResize, CurMove, CurResizeHorzArrow, CurResizeVertArrow, CurLast }; /* cursor */
-enum { SchemeBar, SchemeSelect, SchemeBorder, SchemeFocus, SchemeUnfocus, SchemeTag }; /* color schemes */
+enum { SchemeBar, SchemeSelect, SchemeBorder, SchemeFocus, SchemeUnfocus, SchemeTag, SchemeAlt }; /* color schemes */
 enum { NetSupported, NetSystemTray, NetSystemTrayOP, NetSystemTrayOrientation, NetSystemTrayVisual,
        NetWMName, NetWMIcon, NetWMState, NetWMFullscreen, NetActiveWindow, NetWMWindowType, NetWMWindowTypeDock,
        NetSystemTrayOrientationHorz, NetWMWindowTypeDialog, NetClientList, NetWMCheck, NetLast }; /* EWMH atoms */
@@ -199,6 +181,19 @@ typedef struct {
 	const char scratchkey;
 	const char *floatpos;
 } Rule;
+
+/* Xresources preferences */
+enum resource_type {
+	STRING = 0,
+	INTEGER = 1,
+	FLOAT = 2
+};
+
+typedef struct {
+	char *name;
+	enum resource_type type;
+	void *dst;
+} ResourcePref;
 
 typedef struct Systray Systray;
 struct Systray {
@@ -326,7 +321,7 @@ static void drawtheme(int x, int s, int status, int theme, int y);
 static void drawtabgroups(Monitor *m, int x, int r, int xpos, int passx, int bar);
 static void drawtab(Monitor *m, Client *c, int x, int w, int xpos, int tabgroup_active, int *prev, int bar);
 static void drawtaboptionals(Monitor *m, Client *c, int x, int w, int tabgroup_active);
-static void drawtaggrid(Monitor *m, int *x_pos, unsigned int occ);
+static void drawtaggrid(Monitor *m, int *x_pos, unsigned int occ, int y);
 static Client *findbefore(Client *c);
 static void floatpos(const Arg *arg);
 static void focusdir(const Arg *arg);
@@ -341,7 +336,7 @@ static long get_tmux_client_pid(long shell_pid);
 static void inplacerotate(const Arg *arg);
 static int isdescprocess(pid_t parent, pid_t child);
 static int is_a_tmux_server(pid_t pid);
-static void loadxrdb(void);
+static void load_xresources(void);
 static void losefullscreen(Client *next);
 static void mirrorlayout(const Arg *arg);
 static void moveorplace(const Arg *arg);
@@ -355,6 +350,8 @@ static void removescratch(const Arg *arg);
 static void removesystrayicon(Client *i);
 static void replaceclient(Client *old, Client *new);
 static void resizerequest(XEvent *e);
+static void resource_load(XrmDatabase db, char *name, enum resource_type rtype, void *dst);
+static void resource_reload(const Arg *arg);
 static int riodraw(Client *c, const char slopstyle[]);
 static void rioposition(Client *c, int x, int y, int w, int h);
 static void rioresize(const Arg *arg);
@@ -394,7 +391,6 @@ static void windowsize(const Arg *arg);
 static pid_t winpid(Window w);
 static Client *wintosystrayicon(Window w);
 static void xinitvisual();
-static void xrdb(const Arg *arg);
 
 /* variables */
 static const char broken[] = "broken";
@@ -1196,7 +1192,7 @@ dirtomon(int dir)
 void drawbarborder(Monitor *m) {
 	int s = borderpx > barborder ? barborder : borderpx;
 
-	XSetForeground(drw->dpy, drw->gc, scheme[SchemeBar][ColBorder].pixel);
+	XSetForeground(drw->dpy, drw->gc, scheme[bartheme ? SchemeAlt : SchemeBar][ColBorder].pixel);
 	if (barborder) {
 		XFillRectangle(drw->dpy, drw->drawable, drw->gc, 0, 0, barwidth, barborder);
 		XFillRectangle(drw->dpy, drw->drawable, drw->gc, 0, 0, barborder, barhight);
@@ -1316,7 +1312,7 @@ int drawtag(Monitor *m, int lr, int p, int xpos, int y) {
 			fsep = x;
 			fblock = w;
 		}
-		drawtaggrid(m,&x,occ);
+		drawtaggrid(m,&x,occ,y);
 		lr = lr + w;
 	}
 	tgw = lr - tgw;
@@ -2700,8 +2696,6 @@ setup(void)
 		updatesystray();
 	}
 	/* init bars */
-	bartheme = (tileswitchcolor && gappx <= tileswitch) ? 1 : 0;
-	barhight = (showbar + showebar) * bh + 2 * barborder + (showbar + showebar == 2 ? barsep : 0);
 	updatebars();
 	updatestatus();
 	updatepreview();
@@ -3928,76 +3922,60 @@ drawtheme(int x, int s, int status, int theme, int y) {
 	 * focus 	= 2  button 	= 1
 	 * select 	= 3  floater 	= 2	*/
 
-	int h = y;
-
 	if (x + s == 0) {
 		drw_setscheme(drw, scheme[LENGTH(colors)]);
 		if (status == 3) {
 			drw->scheme[ColFg] = scheme[SchemeSelect][ColFg];
 			drw->scheme[ColBg] = scheme[SchemeSelect][ColBg];
 		} else if (status == 2) {
-			drw->scheme[ColFg] = scheme[bartheme ? SchemeFocus : SchemeUnfocus][ColFg];
-			drw->scheme[ColBg] = scheme[bartheme ? SchemeFocus : SchemeUnfocus][ColBg];
+			drw->scheme[ColFg] = scheme[SchemeFocus][ColFg];
+			drw->scheme[ColBg] = bartheme ? scheme[SchemeAlt][ColFloat] : scheme[SchemeFocus][ColBg];
 		} else if (status == 1) {
 			if (bartheme) {
 				drw->scheme[ColFg] = scheme[theme ? SchemeUnfocus : SchemeBar][ColFg];
-				drw->scheme[ColBg] = scheme[theme ? SchemeUnfocus : SchemeBar][theme ? ColBg : ColFloat];
+				drw->scheme[ColBg] = scheme[SchemeAlt][theme ? ColFg : ColBg];
 			} else {
-				drw->scheme[ColFg] = scheme[SchemeBar][ColFg];
-				drw->scheme[ColBg] = scheme[SchemeBar][ColBg];
+				drw->scheme[ColFg] = scheme[theme ? SchemeUnfocus : SchemeBar][ColFg];
+				drw->scheme[ColBg] = scheme[theme ? SchemeUnfocus : SchemeBar][ColBg];
 			}
 		} else if (status == 0) {
-			drw->scheme[ColFg] = scheme[(bartheme && theme) ? SchemeFocus : SchemeBar][(bartheme && theme) ? ColBg : ColFg];
-			drw->scheme[ColBg] = scheme[SchemeBar][bartheme ? ColFloat : ColBg];
+			drw->scheme[ColFg] = scheme[SchemeBar][ColFg];
+			drw->scheme[ColBg] = scheme[bartheme ? SchemeAlt : SchemeBar][ColBg];
 		}
 	return;
 	}
 
 	if (!theme)
 		return;
+
+	unsigned long upleft = scheme[status == 3 ? SchemeSelect : status == 2 ? SchemeFocus : SchemeUnfocus][ColFloat].pixel;
+	unsigned long downright = scheme[status == 3 ? SchemeSelect : status == 2 ? SchemeFocus : SchemeUnfocus][ColBorder].pixel;
+
 	if (theme == 2) {
-		if (status == 1) {
-			XSetForeground(drw->dpy, drw->gc, scheme[SchemeBar][ColFloat].pixel);
-			XFillRectangle(drw->dpy, drw->drawable, drw->gc, x, h, 2, bh);
-			XFillRectangle(drw->dpy, drw->drawable, drw->gc, x, h + bh - 2, s, 2);
-			XFillRectangle(drw->dpy, drw->drawable, drw->gc, x + s - 2, h, 2, bh);
-			XSetForeground(drw->dpy, drw->gc, scheme[SchemeUnfocus][ColFloat].pixel);
-			XFillRectangle(drw->dpy, drw->drawable, drw->gc, x + s - 2, h + 2, 2, bh - 2);
-			XFillRectangle(drw->dpy, drw->drawable, drw->gc, x + 4, h + bh - 2, s - 4, 2);
-		} else if (status == 2) {
-			XSetForeground(drw->dpy, drw->gc, scheme[SchemeBar][ColFloat].pixel);
-			XFillRectangle(drw->dpy, drw->drawable, drw->gc, x, h, 2, bh);
-			XFillRectangle(drw->dpy, drw->drawable, drw->gc, x + s - 2, h, 2, bh);
-			XFillRectangle(drw->dpy, drw->drawable, drw->gc, x, h, s, 1);
-			XSetForeground(drw->dpy, drw->gc, scheme[SchemeFocus][ColFloat].pixel);
-			XFillRectangle(drw->dpy, drw->drawable, drw->gc, x + 2, h + bh - 1, s - 3, 1);
-			XFillRectangle(drw->dpy, drw->drawable, drw->gc, x + s - 2, h + 1, 1, bh - 1);
-		} else if (status == 3) {
-			XSetForeground(drw->dpy, drw->gc, scheme[SchemeBar][ColFloat].pixel);
-			XFillRectangle(drw->dpy, drw->drawable, drw->gc, x, h, 1, bh);
-			XFillRectangle(drw->dpy, drw->drawable, drw->gc, x + s - 1, h, 1, bh);
-			XFillRectangle(drw->dpy, drw->drawable, drw->gc, x, h + bh - 1, s, 1);
-			XSetForeground(drw->dpy, drw->gc, scheme[SchemeSelect][ColBorder].pixel);
-			XFillRectangle(drw->dpy, drw->drawable, drw->gc, x + 2, h, s - 3, 1);
-			XFillRectangle(drw->dpy, drw->drawable, drw->gc, x + 1, h, 1, bh - 1);
-		}
+		int z = status == 1 ? 2 : 1;
+		int w = status == 3 ? 1 : 2;
+
+		XSetForeground(drw->dpy, drw->gc, upleft);
+		XFillRectangle(drw->dpy, drw->drawable, drw->gc, x, y, 2, bh);
+		XFillRectangle(drw->dpy, drw->drawable, drw->gc, x, y + bh - z, s, z);
+		XFillRectangle(drw->dpy, drw->drawable, drw->gc, x + s - 2, y, 2, bh);
+		if (status != 1)
+			XFillRectangle(drw->dpy, drw->drawable, drw->gc, x, y, s, 1);
+
+		XSetForeground(drw->dpy, drw->gc, downright);
+		XFillRectangle(drw->dpy, drw->drawable, drw->gc, x + s - 2, y + w, z, bh - z);
+		XFillRectangle(drw->dpy, drw->drawable, drw->gc, x + z + w, y + bh - z, s - 2 - z - w, z);
+
 	} else if (theme == 1) {
-		if (status == 1 || status == 2) {
-			XSetForeground(drw->dpy, drw->gc,scheme[SchemeUnfocus][ColBorder].pixel);
-			XFillRectangle(drw->dpy, drw->drawable, drw->gc, x, h, 1, bh - 1);
-			XFillRectangle(drw->dpy, drw->drawable, drw->gc, x, h, s - 1, 1);
-			XSetForeground(drw->dpy, drw->gc,scheme[SchemeUnfocus][ColFloat].pixel);
-			XFillRectangle(drw->dpy, drw->drawable, drw->gc, x + s - 1, h, 1, bh - 1);
-			XFillRectangle(drw->dpy, drw->drawable, drw->gc, x + s - 2, h + bh - 2, 1, 1);
-			XFillRectangle(drw->dpy, drw->drawable, drw->gc, x, h + bh - 1, s, 1);
-		} else if (status == 3) {
-			XSetForeground(drw->dpy, drw->gc, scheme[SchemeBar][ColFloat].pixel);
-			XFillRectangle(drw->dpy, drw->drawable, drw->gc, x + s - 1, h, 1, bh);
-			XFillRectangle(drw->dpy, drw->drawable, drw->gc, x, h + bh - 1, s, 1);
-			XSetForeground(drw->dpy, drw->gc, scheme[SchemeSelect][ColBorder].pixel);
-			XFillRectangle(drw->dpy, drw->drawable, drw->gc, x, h, s - 1, 1);
-			XFillRectangle(drw->dpy, drw->drawable, drw->gc, x, h, 1, bh - 1);
-		}
+		XSetForeground(drw->dpy, drw->gc, upleft);
+		XFillRectangle(drw->dpy, drw->drawable, drw->gc, x, y, s - 1, 1);
+		XFillRectangle(drw->dpy, drw->drawable, drw->gc, x, y, 1, bh - 1);
+
+		XSetForeground(drw->dpy, drw->gc, downright);
+		XFillRectangle(drw->dpy, drw->drawable, drw->gc, x + s - 1, y, 1, bh);
+		XFillRectangle(drw->dpy, drw->drawable, drw->gc, x, y + bh - 1, s, 1);
+		if (status != 3)
+			XFillRectangle(drw->dpy, drw->drawable, drw->gc, x + s - 2, y + bh - 2, 1, 1);
 	}
 }
 
@@ -4180,14 +4158,13 @@ void drawtaboptionals(Monitor *m, Client *c, int x, int w, int tabgroup_active)
 }
 
 void
-drawtaggrid(Monitor *m, int *x_pos, unsigned int occ)
+drawtaggrid(Monitor *m, int *x_pos, unsigned int occ, int y)
 {
-	unsigned int x, y, h, max_x, columns;
+	unsigned int x, h, max_x, columns;
 	int invert, i,j, k;
 	
 	h = bh / tagrows;
 	x = max_x = *x_pos;
-	y = 0;
 	columns = LENGTH(tags) / tagrows + ((LENGTH(tags) % tagrows > 0) ? 1 : 0);
 	
 	/* Firstly we will fill the borders of squares */
@@ -4202,12 +4179,12 @@ drawtaggrid(Monitor *m, int *x_pos, unsigned int occ)
 			invert = m->tagset[m->seltags] & 1 << i ? 0 : 1;
 			
 			/* Select active color for current square */
-			XSetForeground(drw->dpy, drw->gc, !invert ? scheme[SchemeTag][ColFg].pixel : scheme[SchemeTag][ColBg].pixel);
+			XSetForeground(drw->dpy, drw->gc, scheme[SchemeTag][invert ? ColBg : ColFg].pixel);
 			XFillRectangle(dpy, drw->drawable, drw->gc, x+1, y+1, h-1, h-1);
 			
 			/* Mark square if tag has client */
 			if (occ & 1 << i) {
-				XSetForeground(drw->dpy, drw->gc, !invert ? scheme[SchemeTag][ColBg].pixel : scheme[SchemeTag][ColFloat].pixel);
+				XSetForeground(drw->dpy, drw->gc, scheme[SchemeTag][invert ? ColFloat : ColBg].pixel);
 				XFillRectangle(dpy, drw->drawable, drw->gc, x + 1, y + 1, h / 2, h / 2);
 			}
 			x += h;
@@ -4661,51 +4638,21 @@ is_a_tmux_server(pid_t pid)
 }
 
 void
-loadxrdb()
+load_xresources(void)
 {
 	Display *display;
-	char * resm;
-	XrmDatabase xrdb;
-	char *type;
-	XrmValue value;
+	char *resm;
+	XrmDatabase db;
+	ResourcePref *p;
 
 	display = XOpenDisplay(NULL);
+	resm = XResourceManagerString(display);
+	if (!resm)
+		return;
 
-	if (display != NULL) {
-		resm = XResourceManagerString(display);
-
-		if (resm != NULL) {
-			xrdb = XrmGetStringDatabase(resm);
-
-			if (xrdb != NULL) {
-				XRDB_LOAD_COLOR("dwm.bar_fg",  bar_fg);
-				XRDB_LOAD_COLOR("dwm.bar_bg",  bar_bg);
-				XRDB_LOAD_COLOR("dwm.bar_brd", bar_brd);
-				XRDB_LOAD_COLOR("dwm.bar_flo", bar_flo);
-				XRDB_LOAD_COLOR("dwm.tag_fg",  tag_fg);
-				XRDB_LOAD_COLOR("dwm.tag_bg",  tag_bg);
-				XRDB_LOAD_COLOR("dwm.tag_brd", tag_brd);
-				XRDB_LOAD_COLOR("dwm.tag_flo", tag_flo);
-				XRDB_LOAD_COLOR("dwm.brd_fg",  brd_fg);
-				XRDB_LOAD_COLOR("dwm.brd_bg",  brd_bg);
-				XRDB_LOAD_COLOR("dwm.brd_brd", brd_brd);
-				XRDB_LOAD_COLOR("dwm.brd_flo", brd_flo);
-				XRDB_LOAD_COLOR("dwm.sel_fg",  sel_fg);
-				XRDB_LOAD_COLOR("dwm.sel_bg",  sel_bg);
-				XRDB_LOAD_COLOR("dwm.sel_brd", sel_brd);
-				XRDB_LOAD_COLOR("dwm.sel_flo", sel_flo);
-				XRDB_LOAD_COLOR("dwm.foc_fg",  foc_fg);
-				XRDB_LOAD_COLOR("dwm.foc_bg",  foc_bg);
-				XRDB_LOAD_COLOR("dwm.foc_brd", foc_brd);
-				XRDB_LOAD_COLOR("dwm.foc_flo", foc_flo);
-				XRDB_LOAD_COLOR("dwm.unf_fg",  unf_fg);
-				XRDB_LOAD_COLOR("dwm.unf_bg",  unf_bg);
-				XRDB_LOAD_COLOR("dwm.unf_brd", unf_brd);
-				XRDB_LOAD_COLOR("dwm.unf_flo", unf_flo);
-				XrmDestroyDatabase(xrdb);
-			}
-		}
-	}
+	db = XrmGetStringDatabase(resm);
+	for (p = resources; p < resources + LENGTH(resources); p++)
+		resource_load(db, p->name, p->type, p->dst);
 	XCloseDisplay(display);
 }
 
@@ -5066,6 +5013,69 @@ resizerequest(XEvent *e)
 		else
 			drawbar(selmon, 0);
 	}
+}
+
+void
+resource_load(XrmDatabase db, char *name, enum resource_type rtype, void *dst)
+{
+	char *sdst = NULL;
+	int *idst = NULL;
+	float *fdst = NULL;
+
+	sdst = dst;
+	idst = dst;
+	fdst = dst;
+
+	char fullname[256];
+	char *type;
+	XrmValue ret;
+
+	snprintf(fullname, sizeof(fullname), "%s.%s", "dwm", name);
+	fullname[sizeof(fullname) - 1] = '\0';
+
+	XrmGetResource(db, fullname, "*", &type, &ret);
+	if (!(ret.addr == NULL || strncmp("String", type, 64)))
+	{
+		switch (rtype) {
+		case STRING:
+			strcpy(sdst, ret.addr);
+			break;
+		case INTEGER:
+			*idst = strtoul(ret.addr, NULL, 10);
+			break;
+		case FLOAT:
+			*fdst = strtof(ret.addr, NULL);
+			break;
+		}
+	}
+}
+
+void
+resource_reload(const Arg *arg)
+{
+	int i;
+	load_xresources();
+
+	// apply colors
+	for (i = 0; i < LENGTH(colors); i++)
+		scheme[i] = drw_scm_create(drw, colors[i], alphas[i], 4);
+
+	// apply font
+	if (!drw_fontset_create(drw, fonts, LENGTH(fonts)))
+		die("no fonts could be loaded.");
+	lrpad = drw->fonts->h;
+	bh = drw->fonts->h + 2;
+
+	// reload bar
+	updatebarpos(selmon);
+	updatebars();
+	XMoveResizeWindow(dpy, selmon->barwin, selmon->wx + (bargap ? selmon->gappx : 0), selmon->by, barwidth, barhight);
+	drawebar(rawstext, selmon, 0);
+	drawbar(selmon, 0);
+	drawbarborder(selmon);
+
+	focus(NULL);
+	arrange(NULL);
 }
 
 int
@@ -6150,17 +6160,6 @@ xinitvisual()
 	}
 }
 
-void
-xrdb(const Arg *arg)
-{
-	loadxrdb();
-	int i;
-	for (i = 0; i < LENGTH(colors); i++)
-		scheme[i] = drw_scm_create(drw, colors[i], alphas[i], 4);
-	focus(NULL);
-	arrange(NULL);
-}
-
 int
 main(int argc, char *argv[])
 {
@@ -6176,7 +6175,7 @@ main(int argc, char *argv[])
 		die("dwm: cannot get xcb connection\n");
 	checkotherwm();
 	XrmInitialize();
-	loadxrdb();
+	load_xresources();
 	setup();
 #ifdef __OpenBSD__
 	if (pledge("stdio rpath proc exec ps", NULL) == -1)
