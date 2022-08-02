@@ -1468,8 +1468,6 @@ drawstatus(char* stext, Monitor *m, int xpos, int l, int r)
 				drw_text(drw, x, barborder + ((statustheme && !istatustimer) ? sep != fsep || block != fblock ? -1 : 0 : 0), w, bh, 0, text, 0);
 				x += w;
 			}
-			i = -1;
-
 			if (block > 0 && !istatustimer) {
 				if (statustheme) {
 					if (sep != fsep || block != fblock)
@@ -1485,11 +1483,10 @@ drawstatus(char* stext, Monitor *m, int xpos, int l, int r)
 						prev = 0;
 				}
 			}
-
 			sep += block;
 			stext[k] = ch;
 			stext += k+1;
-			k = -1;
+			k = i = -1;
 		}
 	}
 	if (xpos && xpos > sep + block && xpos < selmon->ww - r) {
