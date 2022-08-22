@@ -66,6 +66,7 @@ static char icommandprefix[]	= "dwm:cmd ";		/* prefix for commands */
 static char slopspawnstyle[]	= "-t 0 -l -c 0.92,0.85,0.69,0.3 -o";	/* do NOT define -f (format) here */
 static char slopresizestyle[]	= "-t 0 -l -c 0.92,0.85,0.69,0.3 -o";	/* do NOT define -f (format) here */
 
+static int fontshadow			= 1;		/* 1/0 -- on/off */
 static int attachdirection		= 2;		/* 0 default, 1 above, 2 aside, 3 below, 4 bottom, 5 top */
 static int bargap				= 1;		/* bar padding on/off */
 static int barborder			= 1;		/* size of barborders */
@@ -448,6 +449,7 @@ static Button buttons[] = {
 
 ResourcePref resources[] = {
 		{ "font",					STRING,		&font },
+		{ "fontshadow",				INTEGER,	&fontshadow },
 
 		{ "bar_fg",					STRING,		&bar_fg },
 		{ "bar_bg",					STRING,		&bar_bg },

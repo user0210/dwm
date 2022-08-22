@@ -259,7 +259,7 @@ drw_rect(Drw *drw, int x, int y, unsigned int w, unsigned int h, int filled, int
 }
 
 int
-drw_text(Drw *drw, int x, int y, unsigned int w, unsigned int h, unsigned int lpad, const char *text, int invert)
+drw_text(Drw *drw, int x, int y, unsigned int w, unsigned int h, unsigned int lpad, const char *text, int invert, int fontshadow)
 {
 	char buf[1024];
 	int ty;
@@ -330,6 +330,9 @@ drw_text(Drw *drw, int x, int y, unsigned int w, unsigned int h, unsigned int lp
 
 				if (render) {
 					ty = y + (h - usedfont->h) / 2 + usedfont->xfont->ascent;
+					if (fontshadow)
+						XftDrawStringUtf8(d, &drw->scheme[ColBorder],
+					                  	usedfont->xfont, x + 1, ty + 1, (XftChar8 *)buf, len);
 					XftDrawStringUtf8(d, &drw->scheme[invert ? ColBg : ColFg],
 					                  usedfont->xfont, x, ty, (XftChar8 *)buf, len);
 				}
@@ -421,7 +424,7 @@ drw_fontset_getwidth(Drw *drw, const char *text)
 {
 	if (!drw || !drw->fonts || !text)
 		return 0;
-	return drw_text(drw, 0, 0, 0, 0, 0, text, 0);
+	return drw_text(drw, 0, 0, 0, 0, 0, text, 0, 0);
 }
 
 void

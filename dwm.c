@@ -1284,7 +1284,7 @@ int drawtag(Monitor *m, int lr, int p, int xpos, int y) {
 			} else
 				drawtheme(0,0,1,tagtheme,0);
 			int yy = ((m->tagset[m->seltags] & 1 << i) || (x == fsep && w == fblock)) ? 0 : tagtheme ? -1 : 0;
-			drw_text(drw, x, y + yy, w, bh, lrpad / 2, tags[i], urg & 1 << i);
+			drw_text(drw, x, y + yy, w, bh, lrpad / 2, tags[i], urg & 1 << i, fontshadow);
 			if (tagtheme) {
 				if(m->tagset[m->seltags] & 1 << i)
 					drawtheme(x, w, 3, tagtheme, y);
@@ -1403,7 +1403,7 @@ drawstatus(char* stext, Monitor *m, int xpos, int l, int r)
 					w = TEXTW(text) - lrpad;
 					if (x + w >= selmon->ww - r)
 						return;
-					drw_text(drw, x, barborder + ((statustheme && !istatustimer) ? sep != fsep || block != fblock ? -1 : 0 : 0), w, bh, 0, text, 0);
+					drw_text(drw, x, barborder + ((statustheme && !istatustimer) ? sep != fsep || block != fblock ? -1 : 0 : 0), w, bh, 0, text, 0, fontshadow);
 					x += w;
 					/* process code */
 					while (text[++i] != '^') {
@@ -1465,7 +1465,7 @@ drawstatus(char* stext, Monitor *m, int xpos, int l, int r)
 				w = TEXTW(text) - lrpad;
 				if (x + w >= selmon->ww - r)
 					return;
-				drw_text(drw, x, barborder + ((statustheme && !istatustimer) ? sep != fsep || block != fblock ? -1 : 0 : 0), w, bh, 0, text, 0);
+				drw_text(drw, x, barborder + ((statustheme && !istatustimer) ? sep != fsep || block != fblock ? -1 : 0 : 0), w, bh, 0, text, 0, fontshadow);
 				x += w;
 			}
 			if (block > 0 && !istatustimer) {
@@ -1512,7 +1512,7 @@ int drawltsymbol(Monitor *m, int lr, int p, int xpos, int y) {
 		drawtheme(0,0,2,tagtheme,0);
 	else
 		drawtheme(0,0,0,0,0);
-	drw_text(drw, x, y, blw, bh, lrpad / 2, m->ltsymbol, 0);
+	drw_text(drw, x, y, blw, bh, lrpad / 2, m->ltsymbol, 0, fontshadow);
 
 	return lr + blw;
 }
@@ -4077,7 +4077,7 @@ void drawtab(Monitor *m, Client *c, int x, int w, int xpos, int tabgroup_active,
 		for(n = 0, s = nexttiled(m->clients); s; s = nexttiled(s->next), n++);
 		if (n == 1) {
 			drawtheme(0,0,0,0,0);
-			drw_text(drw, x, y, w, bh, textx, c->name, 0);
+			drw_text(drw, x, y, w, bh, textx, c->name, 0, fontshadow);
 			if (c->icon) drw_img(drw, x + (titlecenter > 1 ? textx - imgw : lrpad / 2), y + (bh - c->icon->height) / 2, c->icon, tmp);
 		}
 	}
@@ -4093,7 +4093,7 @@ void drawtab(Monitor *m, Client *c, int x, int w, int xpos, int tabgroup_active,
 		else
 			drawtheme(0,0,1,tabbartheme,0);
 		texty = y + ((tabbartheme && m->sel != c) ? x != fsep || w != fblock ? -1 : 0 : 0);
-		drw_text(drw, x, texty, w, bh, textx, c->name, 0);
+		drw_text(drw, x, texty, w, bh, textx, c->name, 0, fontshadow);
 		if (c->icon) drw_img(drw, x + (titlecenter > 1 ? textx - imgw : lrpad / 2), texty + (bh - c->icon->height) / 2, c->icon, tmp);
 		if (tabbartheme) {
 			if(m->sel == c)
