@@ -5979,7 +5979,7 @@ windowmove(const Arg *arg)
 
 	if (!c)
 		return;
-	if (c->isfloating) {
+	if (!selmon->lt[selmon->sellt]->arrange || c->isfloating) {
 		if (arg->i == 0)
 			snprintf(pos, sizeof(pos), "-%sa 0a", pospx);
 		if (arg->i == 1)
@@ -6008,7 +6008,7 @@ windowsize(const Arg *arg)
 
 	if (!c)
 		return;
-	if (c->isfloating) {
+	if (!selmon->lt[selmon->sellt]->arrange || c->isfloating) {
 		if (arg->i == 0)
 			snprintf(pos, sizeof(pos), "-%sw 0h", pospx);
 		if (arg->i == 1)
