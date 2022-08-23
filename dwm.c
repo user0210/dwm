@@ -2681,9 +2681,9 @@ setup(void)
 	cursor[CurResizeVertArrow] = drw_cur_create(drw, XC_sb_v_double_arrow);
 	/* init appearance */
 	scheme = ecalloc(LENGTH(colors) + 1, sizeof(Clr *));
-	scheme[LENGTH(colors)] = drw_scm_create(drw, colors[0], alphas[0], 4);
+	scheme[LENGTH(colors)] = drw_scm_create(drw, colors[0], alphas[0], 5);
 	for (i = 0; i < LENGTH(colors); i++)
-		scheme[i] = drw_scm_create(drw, colors[i], alphas[i], 4);
+		scheme[i] = drw_scm_create(drw, colors[i], alphas[i], 5);
 	/* init system tray */
 	if (showsystray) {
 		int len = sizeof(ebarorder)/sizeof(ebarorder[0]);
@@ -3923,20 +3923,23 @@ drawtheme(int x, int s, int status, int theme, int y) {
 		drw_setscheme(drw, scheme[LENGTH(colors)]);
 		if (status == 3) {
 			drw->scheme[ColFg] = scheme[SchemeSelect][ColFg];
+			drw->scheme[ColShadow] = scheme[SchemeSelect][ColShadow];
 			drw->scheme[ColBg] = scheme[SchemeSelect][ColBg];
 		} else if (status == 2) {
 			drw->scheme[ColFg] = scheme[SchemeFocus][ColFg];
+			drw->scheme[ColShadow] = scheme[SchemeFocus][ColShadow];
 			drw->scheme[ColBg] = bartheme ? scheme[SchemeAlt][ColFloat] : scheme[SchemeFocus][ColBg];
 		} else if (status == 1) {
+			drw->scheme[ColFg] = scheme[theme ? SchemeUnfocus : SchemeBar][ColFg];
+			drw->scheme[ColShadow] = scheme[theme ? SchemeUnfocus : SchemeBar][ColShadow];
 			if (bartheme) {
-				drw->scheme[ColFg] = scheme[theme ? SchemeUnfocus : SchemeBar][ColFg];
 				drw->scheme[ColBg] = scheme[SchemeAlt][theme ? ColFg : ColBg];
 			} else {
-				drw->scheme[ColFg] = scheme[theme ? SchemeUnfocus : SchemeBar][ColFg];
 				drw->scheme[ColBg] = scheme[theme ? SchemeUnfocus : SchemeBar][ColBg];
 			}
 		} else if (status == 0) {
 			drw->scheme[ColFg] = scheme[SchemeBar][ColFg];
+			drw->scheme[ColShadow] = scheme[SchemeBar][ColShadow];
 			drw->scheme[ColBg] = scheme[bartheme ? SchemeAlt : SchemeBar][ColBg];
 		}
 	return;
@@ -5055,7 +5058,7 @@ resource_reload(const Arg *arg)
 
 	// apply colors
 	for (i = 0; i < LENGTH(colors); i++)
-		scheme[i] = drw_scm_create(drw, colors[i], alphas[i], 4);
+		scheme[i] = drw_scm_create(drw, colors[i], alphas[i], 5);
 
 	// apply font
 	if (!drw_fontset_create(drw, fonts, LENGTH(fonts)))

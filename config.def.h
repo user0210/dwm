@@ -100,84 +100,98 @@ static int tileswitchcolor		= 1;		/* switch to alt-colors on tileswich */
 static int borderswitch			= 1;		/* 1: switch border on/off with tileswitch */
 static int topbar				= 1;		/* 0 means bottom bar */
 
-static char bar_fg[]			= "#bbbbbb";
-static char bar_bg[]			= "#222222";
-static char bar_brd[]			= "#444444";
-static char bar_flo[]			= "#444444";
-static char sel_fg[]			= "#eeeeee";
-static char sel_bg[]			= "#005577";
-static char sel_brd[]			= "#005577";
-static char sel_flo[]			= "#bbbbbb";
-static char brd_fg[]			= "#eeeeee";
-static char brd_bg[]			= "#222222";
-static char brd_brd[]			= "#444444";
-static char brd_flo[]			= "#444444";
-static char foc_fg[]			= "#222222";
-static char foc_bg[]			= "#eeeeee";
-static char foc_brd[]			= "#444444";
-static char foc_flo[]			= "#bbbbbb";
-static char unf_fg[]			= "#eeeeee";
-static char unf_bg[]			= "#444444";
-static char unf_brd[]			= "#222222";
-static char unf_flo[]			= "#222222";
-static char tag_fg[]			= "#005577";
-static char tag_bg[]			= "#eeeeee";
-static char tag_brd[]			= "#222222";
-static char tag_flo[]			= "#222222";
-static char alt_fg[]			= "#444444";
-static char alt_bg[]			= "#bbbbbb";
-static char alt_brd[]			= "#bbbbbb";
-static char alt_flo[]			= "#444444";
-
 static char bar_fg_a[]			= "1.0";
 static char bar_bg_a[]			= "1.0";
 static char bar_brd_a[]			= "1.0";
 static char bar_flo_a[]			= "1.0";
+static char bar_sha_a[]			= "1.0";
 static char sel_fg_a[]			= "1.0";
 static char sel_bg_a[]			= "1.0";
 static char sel_brd_a[]			= "1.0";
 static char sel_flo_a[]			= "1.0";
+static char sel_sha_a[]			= "1.0";
 static char brd_fg_a[]			= "1.0";
 static char brd_bg_a[]			= "1.0";
 static char brd_brd_a[]			= "1.0";
 static char brd_flo_a[]			= "1.0";
+static char brd_sha_a[]			= "1.0";
 static char foc_fg_a[]			= "1.0";
 static char foc_bg_a[]			= "1.0";
 static char foc_brd_a[]			= "1.0";
 static char foc_flo_a[]			= "1.0";
+static char foc_sha_a[]			= "1.0";
 static char unf_fg_a[]			= "1.0";
 static char unf_bg_a[]			= "1.0";
 static char unf_brd_a[]			= "1.0";
 static char unf_flo_a[]			= "1.0";
+static char unf_sha_a[]			= "1.0";
 static char tag_fg_a[]			= "1.0";
 static char tag_bg_a[]			= "1.0";
 static char tag_brd_a[]			= "1.0";
 static char tag_flo_a[]			= "1.0";
+static char tag_sha_a[]			= "1.0";
 static char alt_fg_a[]			= "1.0";
 static char alt_bg_a[]			= "1.0";
 static char alt_brd_a[]			= "1.0";
 static char alt_flo_a[]			= "1.0";
+static char alt_sha_a[]			= "1.0";
 
-static char *colors[][4]		= {
-	/*					fg			bg			border		float   */
-	[SchemeBar]		= { bar_fg,		bar_bg,		bar_brd,	bar_flo	},
-	[SchemeSelect]	= { sel_fg,		sel_bg,		sel_brd,	sel_flo	},
-	[SchemeBorder]	= { brd_fg,		brd_bg,		brd_brd,	brd_flo },
-	[SchemeFocus]	= { foc_fg,		foc_bg,		foc_brd,	foc_flo },
-	[SchemeUnfocus]	= { unf_fg,		unf_bg,		unf_brd,	unf_flo },
-	[SchemeTag]		= { tag_fg,		tag_bg,		tag_brd,	tag_flo },
-	[SchemeAlt]		= { alt_fg,		alt_bg,		alt_brd,	alt_flo },
+static char bar_fg[]			= "#bbbbbb";
+static char bar_bg[]			= "#222222";
+static char bar_brd[]			= "#444444";
+static char bar_flo[]			= "#444444";
+static char bar_sha[]			= "#000000";
+static char sel_fg[]			= "#eeeeee";
+static char sel_bg[]			= "#005577";
+static char sel_brd[]			= "#005577";
+static char sel_flo[]			= "#bbbbbb";
+static char sel_sha[]			= "#666666";
+static char brd_fg[]			= "#eeeeee";
+static char brd_bg[]			= "#222222";
+static char brd_brd[]			= "#444444";
+static char brd_flo[]			= "#444444";
+static char brd_sha[]			= "#222222";
+static char foc_fg[]			= "#222222";
+static char foc_bg[]			= "#eeeeee";
+static char foc_brd[]			= "#444444";
+static char foc_flo[]			= "#bbbbbb";
+static char foc_sha[]			= "#444444";
+static char unf_fg[]			= "#eeeeee";
+static char unf_bg[]			= "#444444";
+static char unf_brd[]			= "#222222";
+static char unf_flo[]			= "#222222";
+static char unf_sha[]			= "#222222";
+static char tag_fg[]			= "#005577";
+static char tag_bg[]			= "#eeeeee";
+static char tag_brd[]			= "#222222";
+static char tag_flo[]			= "#222222";
+static char tag_sha[]			= "#222222";
+static char alt_fg[]			= "#444444";
+static char alt_bg[]			= "#bbbbbb";
+static char alt_brd[]			= "#bbbbbb";
+static char alt_flo[]			= "#444444";
+static char alt_sha[]			= "#222222";
+
+static char *colors[][5] = {
+	/*					fg			bg			border		float 		shadow 	*/
+	[SchemeBar]		= { bar_fg,		bar_bg,		bar_brd,	bar_flo,	bar_sha },
+	[SchemeSelect]	= { sel_fg,		sel_bg,		sel_brd,	sel_flo,	sel_sha },
+	[SchemeBorder]	= { brd_fg,		brd_bg,		brd_brd,	brd_flo,	brd_sha },
+	[SchemeFocus]	= { foc_fg,		foc_bg,		foc_brd,	foc_flo,	foc_sha },
+	[SchemeUnfocus]	= { unf_fg,		unf_bg,		unf_brd,	unf_flo,	unf_sha },
+	[SchemeTag]		= { tag_fg,		tag_bg,		tag_brd,	tag_flo,	tag_sha },
+	[SchemeAlt]		= { alt_fg,		alt_bg,		alt_brd,	alt_flo,	alt_sha },
 };
 
-static char *alphas[][4] 		= {
-    /*					fg			bg			border		float	*/
-	[SchemeBar]		= { bar_fg_a,	bar_bg_a,	bar_brd_a,	bar_flo_a },
-	[SchemeSelect]	= { sel_fg_a,	sel_bg_a,	sel_brd_a,	sel_flo_a },
-	[SchemeBorder]	= { brd_fg_a,	brd_bg_a,	brd_brd_a,	brd_flo_a },
-	[SchemeFocus]	= { foc_fg_a,	foc_bg_a,	foc_brd_a,	foc_flo_a },
-	[SchemeUnfocus]	= { unf_fg_a,	unf_bg_a,	unf_brd_a,	unf_flo_a },
-	[SchemeTag]		= { tag_fg_a,	tag_bg_a,	tag_brd_a,	tag_flo_a },
-	[SchemeAlt]		= { alt_fg_a,	alt_bg_a,	alt_brd_a,	alt_flo_a },
+static char *alphas[][5] = {
+    /*					fg			bg			border		float 		shadow	*/
+	[SchemeBar]		= { bar_fg_a,	bar_bg_a,	bar_brd_a,	bar_flo_a,	bar_sha_a },
+	[SchemeSelect]	= { sel_fg_a,	sel_bg_a,	sel_brd_a,	sel_flo_a,	sel_sha_a },
+	[SchemeBorder]	= { brd_fg_a,	brd_bg_a,	brd_brd_a,	brd_flo_a,	brd_sha_a },
+	[SchemeFocus]	= { foc_fg_a,	foc_bg_a,	foc_brd_a,	foc_flo_a,	foc_sha_a },
+	[SchemeUnfocus]	= { unf_fg_a,	unf_bg_a,	unf_brd_a,	unf_flo_a,	unf_sha_a },
+	[SchemeTag]		= { tag_fg_a,	tag_bg_a,	tag_brd_a,	tag_flo_a,	tag_sha_a },
+	[SchemeAlt]		= { alt_fg_a,	alt_bg_a,	alt_brd_a,	alt_flo_a,	alt_sha_a },
 };
 
 
@@ -455,59 +469,73 @@ ResourcePref resources[] = {
 		{ "bar_bg",					STRING,		&bar_bg },
 		{ "bar_brd",				STRING,		&bar_brd },
 		{ "bar_flo",				STRING,		&bar_flo },
+		{ "bar_sha",				STRING,		&bar_sha },
 		{ "sel_fg",					STRING,		&sel_fg },
 		{ "sel_bg",					STRING,		&sel_bg },
 		{ "sel_brd",				STRING,		&sel_brd },
 		{ "sel_flo",				STRING,		&sel_flo },
+		{ "sel_sha",				STRING,		&sel_sha },
 		{ "brd_fg",					STRING,		&brd_fg },
 		{ "brd_bg",					STRING,		&brd_bg },
 		{ "brd_brd",				STRING,		&brd_brd },
 		{ "brd_flo",				STRING,		&brd_flo },
+		{ "brd_sha",				STRING,		&brd_sha },
 		{ "foc_fg",					STRING,		&foc_fg },
 		{ "foc_bg",					STRING,		&foc_bg },
 		{ "foc_brd",				STRING,		&foc_brd },
 		{ "foc_flo",				STRING,		&foc_flo },
+		{ "foc_sha",				STRING,		&foc_sha },
 		{ "unf_fg",					STRING,		&unf_fg },
 		{ "unf_bg",					STRING,		&unf_bg },
 		{ "unf_brd",				STRING,		&unf_brd },
 		{ "unf_flo",				STRING,		&unf_flo },
+		{ "unf_sha",				STRING,		&unf_sha },
 		{ "tag_fg",					STRING,		&tag_fg },
 		{ "tag_bg",					STRING,		&tag_bg },
 		{ "tag_brd",				STRING,		&tag_brd },
 		{ "tag_flo",				STRING,		&tag_flo },
+		{ "tag_sha",				STRING,		&tag_sha },
 		{ "alt_fg",					STRING,		&alt_fg },
 		{ "alt_bg",					STRING,		&alt_bg },
 		{ "alt_brd",				STRING,		&alt_brd },
 		{ "alt_flo",				STRING,		&alt_flo },
+		{ "alt_sha",				STRING,		&alt_sha },
 
 		{ "bar_fg_a",				STRING,		&bar_fg_a },
 		{ "bar_bg_a",				STRING,		&bar_bg_a },
 		{ "bar_brd_a",				STRING,		&bar_brd_a },
 		{ "bar_flo_a",				STRING,		&bar_flo_a },
+		{ "bar_sha_a",				STRING,		&bar_sha_a },
 		{ "sel_fg_a",				STRING,		&sel_fg_a },
 		{ "sel_bg_a",				STRING,		&sel_bg_a },
 		{ "sel_brd_a",				STRING,		&sel_brd_a },
 		{ "sel_flo_a",				STRING,		&sel_flo_a },
+		{ "sel_sha_a",				STRING,		&sel_sha_a },
 		{ "brd_fg_a",				STRING,		&brd_fg_a },
 		{ "brd_bg_a",				STRING,		&brd_bg_a },
 		{ "brd_brd_a",				STRING,		&brd_brd_a },
 		{ "brd_flo_a",				STRING,		&brd_flo_a },
+		{ "brd_sha_a",				STRING,		&brd_sha_a },
 		{ "foc_fg_a",				STRING,		&foc_fg_a },
 		{ "foc_bg_a",				STRING,		&foc_bg_a },
 		{ "foc_brd_a",				STRING,		&foc_brd_a },
 		{ "foc_flo_a",				STRING,		&foc_flo_a },
+		{ "foc_sha_a",				STRING,		&foc_sha_a },
 		{ "unf_fg_a",				STRING,		&unf_fg_a },
 		{ "unf_bg_a",				STRING,		&unf_bg_a },
 		{ "unf_brd_a",				STRING,		&unf_brd_a },
 		{ "unf_flo_a",				STRING,		&unf_flo_a },
+		{ "unf_sha_a",				STRING,		&unf_sha_a },
 		{ "tag_fg_a",				STRING,		&tag_fg_a },
 		{ "tag_bg_a",				STRING,		&tag_bg_a },
 		{ "tag_brd_a",				STRING,		&tag_brd_a },
 		{ "tag_flo_a",				STRING,		&tag_flo_a },
+		{ "tag_sha_a",				STRING,		&tag_sha_a },
 		{ "alt_fg_a",				STRING,		&alt_fg_a },
 		{ "alt_bg_a",				STRING,		&alt_bg_a },
 		{ "alt_brd_a",				STRING,		&alt_brd_a },
 		{ "alt_flo_a",				STRING,		&alt_flo_a },
+		{ "alt_sha_a",				STRING,		&alt_sha_a },
 
 		{ "seppad",					INTEGER,	&seppad },
 		{ "statussep",				INTEGER,	&statussep },

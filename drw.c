@@ -331,7 +331,7 @@ drw_text(Drw *drw, int x, int y, unsigned int w, unsigned int h, unsigned int lp
 				if (render) {
 					ty = y + (h - usedfont->h) / 2 + usedfont->xfont->ascent;
 					if (fontshadow)
-						XftDrawStringUtf8(d, &drw->scheme[ColBorder],
+						XftDrawStringUtf8(d, &drw->scheme[ColShadow],
 					                  	usedfont->xfont, x + 1, ty + 1, (XftChar8 *)buf, len);
 					XftDrawStringUtf8(d, &drw->scheme[invert ? ColBg : ColFg],
 					                  usedfont->xfont, x, ty, (XftChar8 *)buf, len);
