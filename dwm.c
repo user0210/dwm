@@ -457,6 +457,8 @@ static int dwmblockssig;
 pid_t dwmblockspid = 0;
 static int istatustimer = 0;
 unsigned int xstat = 0;
+unsigned int itempad = 0;
+unsigned int statuscount = 0;
 
 static int bartheme;
 unsigned int barhight;
@@ -743,6 +745,7 @@ buttonstatus(int l, int xpos, int click)
 			i = -1;
 			if (x >= xpos && dwmblockssig != -1)
 				break;
+			x += 2 * itempad;
 			dwmblockssig = ch;
 		}
 	}
@@ -1344,8 +1347,8 @@ int drawsystray(Monitor *m, int lr, int p, int xpos, int y) {
 void
 drawstatus(char* stext, Monitor *m, int xpos, int l, int r)
 {
-	int prev = 1, len, w, x = l, sep = l, block = 0, k = -1, i = -1;
-	char ch, *p, *text, blocktext[1024];
+	int prev = 1, len, w, x = l, sep = l, block = 0, i = -1, k = -1, itemstart = 1;
+	char *p, *text, blocktext[1024];
 	short isCode = 0;
 
 	if (istatustimer >= 0)
@@ -1358,11 +1361,11 @@ drawstatus(char* stext, Monitor *m, int xpos, int l, int r)
 	if (!(text = (char*) malloc(sizeof(char)*(len + 1))))
 		die("malloc");
 
-	ch = '\n';
-	strncat(stext, &ch, 1);
+	if (statusspan)
+		itempad = statuscount ? (selmon->ww - l - r - status2dtextlength(stext)) / (2 * statuscount) : 0;
 
 	if (statuscenter) {
-		xstat = (selmon->ww - l - r - status2dtextlength(stext)) / 2;
+		xstat = (selmon->ww - l - r - status2dtextlength(stext) - 2 * itempad * statuscount) / 2;
 		x = sep += xstat;
 		if (xpos > l && xpos < x) {
 			fsep = l;
@@ -1374,12 +1377,9 @@ drawstatus(char* stext, Monitor *m, int xpos, int l, int r)
 
 	while (stext[++k]) {
 		blocktext[++i] = stext[k];
-		if ((unsigned char)stext[k] < ' ') {
-			ch = stext[k];
-			stext[k] = blocktext[i] = '\0';
-			while (blocktext[++i])
-				blocktext[i] = '\0';
-			block = status2dtextlength(stext);
+		if ((unsigned char)stext[k] < ' ') {	// ' ' is at the end of a block-element
+			blocktext[i] = '\0';
+			block = status2dtextlength(blocktext) > 0 ? status2dtextlength(blocktext) + 2 * itempad : 0;
 			if (xpos && xpos > sep && xpos <= sep + block) {
 				fsep = sep;
 				fblock = block;
@@ -1392,20 +1392,19 @@ drawstatus(char* stext, Monitor *m, int xpos, int l, int r)
 				drawtheme(0,0,1,statustheme,0);
 
 			/* process status text-element */
-
 			copyvalidchars(text, blocktext);
-			text[len] = '\0';
 			i = -1;
 			while (text[++i]) {
 				if (text[i] == '^' && !isCode) {
-					isCode = 1;
 					text[i] = '\0';
-					w = TEXTW(text) - lrpad;
+					w = TEXTW(text) - lrpad + itemstart * itempad;
 					if (x + w >= selmon->ww - r)
 						return;
-					drw_text(drw, x, barborder + ((statustheme && !istatustimer) ? sep != fsep || block != fblock ? -1 : 0 : 0), w, bh, 0, text, 0, fontshadow);
+					drw_text(drw, x, barborder + ((statustheme && !istatustimer) ? sep != fsep || block != fblock ? -1 : 0 : 0), w, bh, itemstart * itempad, text, 0, fontshadow);
 					x += w;
 					/* process code */
+					isCode = 1;
+					itemstart = 0;
 					while (text[++i] != '^') {
 						if (text[i] == 'c') {
 							char buf[8];
@@ -1453,22 +1452,21 @@ drawstatus(char* stext, Monitor *m, int xpos, int l, int r)
 							x += atoi(text + ++i);
 						}
 					}
-					text = text + i + 1;
+					text += i + 1;
 					len -= i + 1;
 					i = -1;
 					isCode = 0;
-					if (len <= 0)
-						break;
 				}
 			}
-			if (!isCode && len > 0) {
-				w = TEXTW(text) - lrpad;
+			if (!isCode && block) {
+				w = TEXTW(text) - lrpad + (itemstart ? 2 : 1) * itempad;
 				if (x + w >= selmon->ww - r)
 					return;
-				drw_text(drw, x, barborder + ((statustheme && !istatustimer) ? sep != fsep || block != fblock ? -1 : 0 : 0), w, bh, 0, text, 0, fontshadow);
+				drw_text(drw, x, barborder + ((statustheme && !istatustimer) ? sep != fsep || block != fblock ? -1 : 0 : 0), w, bh, itemstart * itempad, text, 0, fontshadow);
 				x += w;
+				itemstart = 1;
 			}
-			if (block > 0 && !istatustimer) {
+			if (block && !istatustimer) {
 				if (statustheme) {
 					if (sep != fsep || block != fblock)
 						drawtheme(sep, block, 1, statustheme, barborder);
@@ -1484,8 +1482,7 @@ drawstatus(char* stext, Monitor *m, int xpos, int l, int r)
 				}
 			}
 			sep += block;
-			stext[k] = ch;
-			stext += k+1;
+			stext += k + 1;
 			k = i = -1;
 		}
 	}
@@ -3443,12 +3440,14 @@ updatesizehints(Client *c)
 void
 updatestatus(void)
 {
-	int now;
+	int now = time(NULL), i = -1, k = -1;
+	char ch = '\n', blocktext[1024];
+
 	if (!gettextprop(root, XA_WM_NAME, rawtext, sizeof(rawtext))) {
 		istatustimer = 1;
-		strcpy(rawstext, "dwm-"VERSION);
+		strcpy(rawstext, " dwm-"VERSION);
+		strncat(rawstext, &ch, 1);
 	} else {
-		now = time(NULL);
 		if (strncmp(istatusclose, rawtext, strlen(istatusclose)) == 0) {
 			istatustimer = 0;
 			strncpy(rawstext, stext, sizeof(stext));
@@ -3462,9 +3461,21 @@ updatestatus(void)
 			copyvalidchars(rawstext, rawtext + sizeof(char) * strlen(istatusprefix));
     		memmove(rawstext + strlen(" "), rawstext, strlen(rawstext) + 1);	// add space at beginning
     		memcpy(rawstext, " ", strlen(" "));									// add space at beginning
+			strncat(rawstext, &ch, 1);
 			drawebar(rawstext, selmon, 0);
 		} else if (istatustimer == 0 || now - abs(istatustimer) > istatustimeout) {
-			istatustimer = 0;
+			istatustimer = statuscount = 0;
+			strncat(rawtext, &ch, 1);
+			if (statusspan)
+				while (rawtext[++i]) {
+					blocktext[++k] = rawtext[i];
+					if ((unsigned char)rawtext[i] < ' ') {
+						blocktext[k] = '\0';
+						if (status2dtextlength(blocktext) > 0)
+							statuscount++;
+						k = -1;
+					}
+				}
 			strncpy(rawstext, rawtext, sizeof(rawtext));
 			drawebar(rawstext, selmon, 0);
 		}

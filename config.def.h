@@ -89,6 +89,7 @@ static int snap					= 32;		/* snap pixel */
 static int showbar				= 1;		/* 0 means no bar */
 static int showebar         	= 1;        /* 0 means no extra bar */
 static int statuscenter			= 0;		/* center status elements */
+static int statusspan			= 1;		/* span status over space */
 static int titlecenter			= 2;		/* 1 - center title, 2 center title with icon */
 static int swallowfloating		= 1;		/* 1 means swallow floating windows by default */
 static int systraypinning 		= 0;		/* 0: sloppy systray follows selected monitor, >0: pin systray to monitor X */
